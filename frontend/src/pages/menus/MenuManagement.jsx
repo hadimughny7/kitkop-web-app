@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { menuAPI, categoryAPI } from '../../services/api';
+import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineTag } from 'react-icons/hi';
@@ -182,7 +182,7 @@ const MenuManagement = () => {
                 <tr key={m.id} style={{ opacity: m.is_available ? 1 : 0.6 }}>
                   <td>
                     {m.image ? (
-                      <img src={`http://localhost:5000${m.image}`} alt={m.name} style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
+                      <img src={`${BACKEND_URL}${m.image}`} alt={m.name} style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
                     ) : (
                       <div style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🍽️</div>
                     )}

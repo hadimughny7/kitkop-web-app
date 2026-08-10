@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { stockAPI, recipeAPI, menuAPI, orderAPI } from '../../services/api';
+import { stockAPI, recipeAPI, menuAPI, orderAPI, BACKEND_URL } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineBookOpen, HiOutlineExclamationCircle, HiOutlineCheckCircle, HiOutlineCube, HiOutlineShoppingCart, HiOutlineUpload, HiOutlineMinusCircle } from 'react-icons/hi';
 import { io } from 'socket.io-client';
@@ -40,7 +40,7 @@ const StockManagement = () => {
   };
 
   useEffect(() => {
-    const socket = io('http://localhost:5000');
+    const socket = io(BACKEND_URL);
     socket.on('stock-updated', () => {
       loadStocks();
       loadLogs();

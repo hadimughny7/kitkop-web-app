@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { stockAPI } from '../../services/api';
+import { stockAPI, BACKEND_URL } from '../../services/api';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import {
@@ -40,7 +40,7 @@ const StockHistory = () => {
 
   // Realtime: listen for stock changes via socket
   useEffect(() => {
-    const socket = io('http://localhost:5000');
+    const socket = io(BACKEND_URL);
 
     const handleUpdate = () => {
       // Only auto-refresh if we're viewing today

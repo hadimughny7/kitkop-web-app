@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { menuAPI, categoryAPI } from '../../services/api';
+import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import { HiOutlineShoppingCart, HiOutlineSearch, HiPlus, HiMinus } from 'react-icons/hi';
 import toast from 'react-hot-toast';
@@ -136,7 +136,7 @@ const MenuPage = () => {
               <div key={menu.id} className={`menu-card ${!menu.is_available ? 'unavailable' : ''}`}>
                 {menu.image ? (
                   <img
-                    src={`http://localhost:5000${menu.image}`}
+                    src={`${BACKEND_URL}${menu.image}`}
                     alt={menu.name}
                     className="menu-card-img"
                   />

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { orderAPI } from '../../services/api';
+import { orderAPI, BACKEND_URL } from '../../services/api';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlineRefresh, HiCheck, HiVolumeOff } from 'react-icons/hi';
@@ -20,7 +20,7 @@ const KitchenDashboard = () => {
 
   useEffect(() => {
     loadOrders();
-    const socket = io('http://localhost:5000');
+    const socket = io(BACKEND_URL);
     socket.emit('join-room', 'kitchen');
 
     socket.on('new-order', () => {

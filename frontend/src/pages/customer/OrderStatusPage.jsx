@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { orderAPI, paymentAPI } from '../../services/api';
+import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
 import { HiCheck, HiOutlineClock } from 'react-icons/hi';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -22,7 +22,7 @@ const OrderStatusPage = () => {
 
   useEffect(() => {
     loadOrder();
-    const socket = io('http://localhost:5000');
+    const socket = io(BACKEND_URL);
     socket.emit('track-order', orderNumber);
 
     socket.on('order-status-update', (data) => {

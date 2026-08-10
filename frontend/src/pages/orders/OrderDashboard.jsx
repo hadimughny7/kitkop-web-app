@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { orderAPI, paymentAPI } from '../../services/api';
+import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   HiOutlineCash,
@@ -68,7 +68,7 @@ const OrderDashboard = () => {
   }, []);
 
   useEffect(() => {
-    const socket = io('http://localhost:5000');
+    const socket = io(BACKEND_URL);
     socket.emit('join-role', 'admin');
 
     socket.on('new-order', () => {
