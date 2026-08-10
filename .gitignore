@@ -34,8 +34,8 @@ Thumbs.db
 # Upload files (gambar menu dll - opsional, bisa di-push jika ingin)
 # backend/uploads/
 
-# Database dumps
-database/*.sql
+# Database dumps (uncomment jika tidak ingin push file SQL besar)
+# database/*.sql
 
 # Misc
 *.local
