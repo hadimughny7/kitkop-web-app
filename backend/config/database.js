@@ -17,6 +17,14 @@ const sequelize = new Sequelize(
       idle: 10000,
     },
     timezone: '+07:00', // WIB
+    ...(process.env.DB_SSL === 'true' && {
+      dialectOptions: {
+        ssl: {
+          require: true,
+          rejectUnauthorized: false,
+        },
+      },
+    }),
   }
 );
 
