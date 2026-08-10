@@ -1,0 +1,704 @@
+
+
+---
+updatedAt: 2026-05-21T09:55:33.000Z
+---
+
+Fetch the complete documentation index at: https://docs.midtrans.com/llms.txt. Use this file to discover all available pages before exploring further.
+
+# Testing Payment on Sandbox
+
+Sandbox Environment can be used to create "testing" transactions (usually performed from your development/testing environment). All transaction made within this environment mode is not "real", and does not require "real payment/fund". This environment is created automatically when you are signing up, and free to use.
+
+In the Sandbox environment, Midtrans uses web-based simulator to simulate a response from payment provider or bank's system. This helps to test different scenarios that can happen on production, without actually doing real payments.
+
+This is the list of payment credentials that you can use on Midtrans **Sandbox environment**. Please note that, it will not work on Production environment.
+
+<br />
+
+***
+
+<br />
+
+## Card Payments
+
+<br />
+
+The table given below lists the details to be entered for simulating credit card transactions. All cards listed below already support 8 digit BINS.
+
+<br />
+
+| Input        | Value                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------- |
+| Expiry Month | any month, e.g. `01`                                                                               |
+| Expiry Year  | any future year, e.g. `2030`. To test in Snap checkout, simply input the last 2 digit of the year. |
+| CVV          | `123`                                                                                              |
+| OTP/3DS      | `112233`                                                                                           |
+| Card Number  | Refer to table given below.                                                                        |
+
+<br />
+
+### General
+
+<br />
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        VISA
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Full Authentication <br /> _Cardholder is 3DS ready_
+      </td>
+
+      <td>
+        * *Accept Transaction:**4811 1111 1111 1114<br /> **Denied by Bank Transaction:** 4911 1111 1111 1113
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Attempted Authentication <br /> _Cardholder is not<br /> enrolled for 3DS_
+      </td>
+
+      <td>
+        * *Accept Transaction:**4411 1111 1111 1118<br /> **Denied by FDS Transaction:**4611 1111 1111 1116<br /> **Denied by Bank Transaction:** 4711 1111 1111 1115
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        MASTERCARD
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Full Authentication <br /> _Cardholder is 3DS ready_
+      </td>
+
+      <td>
+        * *Accept Transaction:**5211 1111 1111 1117<br /> **Denied by Bank Transaction:** 5111 1111 1111 1118
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Attempted Authentication <br /> _Cardholder is not<br />  enrolled for 3DS_
+      </td>
+
+      <td>
+        * *Accept Transaction:**5410 1111 1111 1116<br /> **Denied by FDS Transaction:**5411 1111 1111 1115<br /> **Denied by Bank Transaction:** 5511 1111 1111 1114
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        JCB
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Full Authentication <br /> _Cardholder is 3DS ready_
+      </td>
+
+      <td>
+        * *Accept Transaction:**3528 2033 2456 4357<br /> **Denied by Bank Transaction:** 3528 5129 4493 2269
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Attempted Authentication <br /> _Cardholder is not<br />  enrolled for 3DS_
+      </td>
+
+      <td>
+        * *Accept Transaction:**3528 8680 4786 4225<br /> **Denied by FDS Transaction:**3528 1852 6717 1623<br /> **Denied by Bank Transaction:** 3528 9097 7983 7631
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        American Express (AMEX)
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Full Authentication <br /> _Cardholder is 3DS ready_
+      </td>
+
+      <td>
+        * *Accept Transaction:**3701 9216 9722 458<br /> **Denied by Bank Transaction:** 3742 9635 4400 881
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Attempted Authentication <br /> _Cardholder is not<br />  enrolled for 3DS_
+      </td>
+
+      <td>
+        * *Accept Transaction:**3737 4772 6661 940<br /> **Denied by FDS Transaction:**3780 9621 8340 018<br /> **Denied by Bank Transaction:** 3703 5609 7975 856
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        China Union Pay (CUP)
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Full Authentication <br /> _Cardholder is 3DS ready_
+      </td>
+
+      <td>
+        * *Accept Transaction:**6212 4878 9242 5802<br /> **Denied by Bank Transaction:** 6212 4841 2968 7072
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Attempted Authentication <br /> _Cardholder is not<br />  enrolled for 3DS_
+      </td>
+
+      <td>
+        * *Accept Transaction:**6212 4895 0662 1198<br /> **Denied by FDS Transaction:**6212 4825 3517 8193 972<br /> **Denied by Bank Transaction:** 6212 4842 2863 5865
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+FDS refers to our Fraud Detection System. "Denied by FDS" means to simulate a transaction that is being denied because it is suspected as fraudulent.
+
+<br />
+
+> 📘 Note
+>
+> Not all acquiring banks support JCB, Amex, or CUP cards. Please contact us for more information or assistance with activation of JCB, Amex, or CUP acceptance.
+
+<br />
+
+### Bank-Specific
+
+This is useful for Installment/Promo scenario which require bank specific card.
+
+<br />
+
+**Accepted 3D Secure Card**
+
+| BANK                                                                           | VISA                | MASTERCARD          |
+| :----------------------------------------------------------------------------- | :------------------ | :------------------ |
+| **Mandiri Credit**                                                             |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4617 0069 5974 6656 | 5573 3810 7219 6900 |
+| *Attempted Authentication* (ECI 06/01)                                         | 4617 0017 4194 2101 | 5573 3819 9982 5417 |
+| **Mandiri Debit**\*                                                            |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4097 6611 1111 1113 |                     |
+| *Attempted Authentication* (ECI 06/01)                                         | 4097 6611 1111 1139 |                     |
+| <small>\*Card not available for online installment/promo</small>               |                     |                     |
+| **CIMB**                                                                       |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4599 2078 8712 2414 | 5481 1698 1883 2479 |
+| *Attempted Authentication* (ECI 06/01)\_                                       | 4599 2039 9705 2898 | 5481 1671 2103 2563 |
+| **BNI**                                                                        |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4105 0586 8948 1467 | 5264 2210 3887 4659 |
+| *Attempted Authentication* (ECI 06/01)\_                                       | 4105 0525 4151 2148 | 5264 2249 7176 1016 |
+| **BNI Private Label** <small>\*Card only acceptable via BNI Acquiring.</small> | 1946 4159 8148 7684 |                     |
+| **BCA**                                                                        |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4773 7760 5705 1650 | 5229 9031 3685 3172 |
+| *Attempted Authentication* (ECI 06/01)\_                                       | 4773 7738 1098 1190 | 5229 9073 6430 3610 |
+| **BRI**                                                                        |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4365 0263 3573 7199 | 5520 0298 7089 9100 |
+| *Attempted Authentication* (ECI 06/01)\_                                       | 4365 0278 6723 2690 | 5520 0254 8646 8439 |
+| **MEGA**                                                                       |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4201 9100 0000 0009 | 5221 0300 0000 0009 |
+| *Attempted Authentication* (ECI 06/01)\_                                       | 4201 9100 0000 0017 | 5221 0300 0000 0017 |
+| **Maybank**                                                                    |                     |                     |
+| *Full Authentication*(ECI 05/02)                                               | 4055 7720 2603 6004 | 5520 0867 5210 2334 |
+| *Attempted Authentication* (ECI 06/01)\_                                       | 4055 7713 3514 4012 | 5520 0867 7490 8452 |
+
+<br />
+
+**Denied Card**
+
+| BANK                  | VISA                | MASTERCARD          |
+| :-------------------- | :------------------ | :------------------ |
+| **Mandiri**           | 4617 0085 6083 1760 | 5573 3840 4322 4447 |
+| **Mandiri Debit**     | 4097 6676 7217 8631 |                     |
+| **CIMB**              | 4599 2060 0973 3090 | 5481 1691 9178 2739 |
+| **BNI**               | 4105 0541 4854 1363 | 5264 2235 3013 1711 |
+| **BNI Private Label** | 1946 4102 7193 1269 |                     |
+| **BCA**               | 4773 7752 0201 1809 | 5229 9034 0542 3830 |
+| **BRI**               | 4365 0286 6251 2583 | 5520 0219 0920 3008 |
+| **MEGA**              | 4201 9100 0000 0025 | 5221 0300 0000 0025 |
+| **Maybank**           | 4055 7796 2846 0474 | 5520 0883 1465 3770 |
+
+<br />
+
+**Denied Card By Response Code**
+
+| Card Number         | Response Code | Note                                          |
+| ------------------- | ------------- | --------------------------------------------- |
+| 4472 4298 6999 6670 | 51            | Any amount will return RC:51.                 |
+| 4806 0000 0000 0081 | 51            | The amount needs to be greater than Rp 30,000 |
+
+<br />
+
+**Offline Card**
+
+It is used for testing a specific scenario where the card is not eligible for online transactions, which result in *Deny* transaction status.
+
+| Brand      | Card Number         |
+| ---------- | ------------------- |
+| VISA       | 4705 8595 1098 4866 |
+| MASTERCARD | 5597 5189 2656 1951 |
+
+<br />
+
+> 📘 Note
+>
+> * General card number is used for general feature testing of card payment.
+> * Bank specific card number is useful for testing advanced card features (on-us/off-us installments, whitelist BIN, promo, and so on) that require card from specific bank.
+
+### 3D Secure Version Specific
+
+> 📘 3DS 2 Behavior Change Notice
+>
+> To reflect the changes that has been applied to our Production Environment, on **31st January 2023** similar changes is applied to Sandbox Environment. The changes are summarized as follows:
+>
+> * Most/all **acquirer bank MIDs** within merchants’ sandbox accounts is upgraded to allow accepting **3DS 2**. The previously MIGS acquirer MID's `channel` will be replaced with MPGS. Which will change the transaction's value of `channel_response_message` and `channel_response_code`. [As explained in this notice](https://api-docs.midtrans.com/#october-7-2022).
+> * All sandbox **testing cards** (that were previously 3DS 1) are **upgraded to 3DS 2**. Including cards listed under General and Bank Specific tabs.
+> * These changes are supposed to be **seamless**, not cause breaking, and **not require changes of implementation** from the merchant side (except IF merchant is still using a very old pre-2019 card integration flow, then card transaction will be treated as 3DS 1).
+> * Background context: 3DS 1 has been phased-out & upgraded to 3DS 2 in Production Environment & industry wide. Hence the same are applied to Sandbox.
+
+#### 3D Secure 2
+
+Specific cards for testing 3DS 2 card payment scenario.
+
+<br />
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        VISA
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Card 3DS 2 Enrolled. <br /> _frictionless 3DS (3DS input NOT prompted)_
+      </td>
+
+      <td>
+        * *Accept:**4556 5579 5572 6624<br /> **Accept**: 4024 0071 8944 9340<br /> **Deny:** 4485 4364 5535 4151
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Card 3DS 2 Enrolled. <br /> _challenged by 3DS (3DS input prompted)_
+      </td>
+
+      <td>
+        * *Accept:**4916 9940 6425 2017<br /> **Deny:**4604 6331 9421 9929<br /><br /> **Result still**`Pending` **initially**(will become**Accept** after 60sec delay): <br /> 4024 0071 7626 5022
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        3DS authentication is either failed or could not be attempted; possible reasons being both card and Issuing Bank are not secured by 3DS(technical errors or improper configuration).
+      </td>
+
+      <td>
+        * _Deny:_* 4716 1250 5984 7899
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        MASTERCARD
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Card 3DS 2 Enrolled. <br /> _frictionless 3DS (3DS input NOT prompted)_
+      </td>
+
+      <td>
+        * *Accept:**5333 2591 5564 3223<br /> **Deny:** 5328 7203 8458 2224
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Card 3DS 2 Enrolled. <br /> _challenged by 3DS (3DS input prompted)_
+      </td>
+
+      <td>
+        * *Accept:**5306 8899 4283 3340<br /> **Deny:**5424 1840 4982 1670<br /><br /> **Result still**`Pending` **initially**(will become**Accept** after 60sec delay): <br /> 5487 9716 3133 0522
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        3DS authentication is either failed or could not be attempted; possible reasons being both card and Issuing Bank are not secured by 3DS(technical errors or improper configuration).
+      </td>
+
+      <td>
+        * _Deny:_* 5250 5486 9206 9390
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        AMEX
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        Card 3DS 2 Enrolled. <br /> _frictionless 3DS (input NOT prompted)_
+      </td>
+
+      <td>
+        * *Accept:**3415 0209 8634 895<br /> **Deny:** 3456 9539 9207 589
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        Card 3DS 2 Enrolled. <br /> _challenged by 3DS (3DS input prompted)_
+      </td>
+
+      <td>
+        * *Accept:**3486 3826 7931 507<br /> **Deny:**3720 2110 6351 394<br /><br /> **Result still**`Pending` **initially**(will become**Accept** after 60sec delay): <br /> 3451 9777 1649 926
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        3DS authentication is either failed or could not be attempted; possible reasons being both card and Issuing Bank are not secured by 3DS(technical errors or improper configuration).
+      </td>
+
+      <td>
+        * _Deny:_* 3794 5219 9603 6850
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<br />
+
+#### 3D Secure 1
+
+Specific cards for testing outdated 3DS 1 card payment scenario, which will be rejected due to no longer supported.
+
+| Brand      | Card Number      |
+| ---------- | ---------------- |
+| Visa       | 4723249479082225 |
+| MasterCard | 5555666677771111 |
+| JCB        | 3528927894502153 |
+| Amex       | 3419184532253540 |
+
+<br />
+
+***
+
+<br />
+
+## E-Wallet
+
+<Table>
+  <thead>
+    <tr>
+      <th>
+        Payment Methods
+      </th>
+
+      <th>
+        Description
+      </th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <tr>
+      <td>
+        GoPay
+      </td>
+
+      <td>
+        On mobile platform you are automatically redirected to GoPay Simulator.  
+        On desktop, QR Code image is displayed. To perform a test transaction, input the QR Code image URL in [QRIS Simulator](https://simulator.sandbox.midtrans.com/v2/qris/index)
+
+        Other Notes:
+
+        * For GoPay Tokenization testing phone numbers in Sandbox, please refer to this [list](/reference/testing-gopay-tokenization-on-sandbox-environment#testing-user-account)
+        * In case you need to manually input GoPay Deeplink URL, use [GoPay Deeplink Simulator](https://simulator.sandbox.midtrans.com/v2/deeplink/index)
+        * Older version (in case your Sandbox account was still configured under older version, prior to November 4th 2024) of the simulators URL: [QRIS Simulator](https://simulator.sandbox.midtrans.com/qris/index) and [GoPay QR Simulator](https://simulator.sandbox.midtrans.com/gopay/ui/index)
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        ShopeePay
+      </td>
+
+      <td>
+        On mobile platform you are automatically redirected to ShopeePay Simulator.
+
+        On desktop, QR Code image is displayed. To perform a test transaction, input the QR Code image URL in [QRIS Simulator](https://simulator.sandbox.midtrans.com/v2/qris/index).
+
+        In case you need to manually input Deeplink URL, use [Deeplink Simulator](https://simulator.sandbox.midtrans.com/v2/deeplink/index)
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        QRIS
+      </td>
+
+      <td>
+        To perform a test transaction, copy the QR Code image URL and input it into [QRIS Simulator](https://simulator.sandbox.midtrans.com/v2/qris/index)
+
+        Other Notes:
+
+        * Older version of the simulators (in case your Sandbox account was still on older version) URL: [QRIS Simulator](https://simulator.sandbox.midtrans.com/qris/index)  and [GoPay QR Simulator](https://simulator.sandbox.midtrans.com/gopay/ui/index)
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        OVO
+      </td>
+
+      <td>
+        To perform OVO transactions, you can use **any random phone numbers** to simulate happy flow scenario.
+
+        For error we are mapping one phone number to mapped to a specific scenario. Ensure you use the correct phone number for the intended test.
+
+        1. **+628249134000** : Phone number not registered in OVO system (RC 14)
+        2. **+628271939753** :  User canceled payment using OVO Apps (RC 17)
+        3. **+628242014881** : Failed push payment confirmation to OVO Apps (RC 26)
+        4. **+628237435829** : Failed Push Payment, payment failed (RC 40)
+        5. **+628215023424** : Transaction Pending / Timeout (RC 68 : OVO Wallet late to give response to OVO JPOS)
+        6. **+628242974268** : No response from OVO in 60 sec (Order will be expired at default expiry 65 sec).
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        * *[DEPRECATED] **Indosat Dompetku
+      </td>
+
+      <td>
+        * *Accept number:**08123456789<br />**Deny number:** other than 08123456789
+      </td>
+    </tr>
+
+    <tr>
+      <td>
+        * *[DEPRECATED] **Mandiri E-cash
+      </td>
+
+      <td>
+        * *Accept number:**0987654321<br /> **PIN:**12345<br /> **OTP:** 12123434
+      </td>
+    </tr>
+  </tbody>
+</Table>
+
+<br />
+
+> 📘 Note
+>
+> On Sandbox, Midtrans uses web-based payment simulator. So, payment that requires app deeplink like GoPay, will use web simulator instead of real app deeplink. To test real app deeplink use cases, please use Midtrans *Production Environment*.
+
+<br />
+
+***
+
+<br />
+
+## Bank Transfer
+
+<br />
+
+| Payment Methods         | Description                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Permata Virtual Account | Midtrans will generate a dummy Permata Virtual Account Number. To perform a test transaction, use the [Permata Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index) and choose Permata as the bank.                                                                                                                                               |
+| BCA Virtual Account     | Midtrans will generate a dummy BCA Virtual Account Number. To perform a test transaction, use the [BCA Virtual Account Simulator](https://simulator.sandbox.midtrans.com/bca/va/index).                                                                                                                                                                                                     |
+| Mandiri Bill Payment    | Midtrans will generate a Payment Code to complete payment via Mandiri e-channel (Internet Banking, SMS Banking, Mandiri ATM). To perform a test transaction, use the [Mandiri Bill Payment Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=mandiri) and choose Mandiri as the bank, input company code as bill code and Mandiri Bill number as bill key. |
+| BNI Virtual Account     | Midtrans will generate a dummy BNI Virtual Account Number. To perform a test transaction, use the [BNI Virtual Account Simulator](https://simulator.sandbox.midtrans.com/bni/va/index).                                                                                                                                                                                                     |
+| BRI Virtual Account     | Midtrans will generate a dummy BRI Virtual Account Number. To perform a test transaction, use the [BRI Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index) and choose BRI as the bank.                                                                                                                                                           |
+| CIMB Virtual Account    | Midtrans will generate a dummy CIMB Virtual Account Number. To perform a test transaction, use the [CIMB Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index) and choose CIMB as the bank.                                                                                                                                                        |
+| BSI  Virtual Account    | Midtrans will generate a dummy BSI Virtual Account Number. To perform a test transaction, use the [BSI Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=bsi) and input the VA number.                                                                                                                                                     |
+| Danamon Virtual Account | Midtrans will generate a dummy Danamon Virtual Account Number. To perform a test transaction, use the [Danamon Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=danamon) and input the VA number.                                                                                                                                         |
+| Seabank Virtual Account | Midtrans will generate a dummy Seabank Virtual Account Number. To perform a test transaction, use the [Seabank Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=seabank) and input the VA number.                                                                                                                                         |
+| Saqu Virtual Account    | Midtrans will generate a dummy Saqu Virtual Account Number. To perform a test transaction, use the [Saqu Virtual Account Simulator - Open API](https://simulator.sandbox.midtrans.com/openapi/va/index?bank=saqu) and choose input the VA number.                                                                                                                                           |
+
+<br />
+
+***
+
+<br />
+
+## Convenience Store
+
+<br />
+
+| Payment Methods | Description                                                                                                                                                                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Indomaret       | Midtrans will generate a dummy Indomaret Payment Code. To perform a test transaction, use the [Indomaret Simulator](https://simulator.sandbox.midtrans.com/indomaret/phoenix/index). |
+| Alfamart        | Midtrans will generate a dummy Alfamart Payment Code. To perform a test transaction, use the [Alfamart Simulator](https://simulator.sandbox.midtrans.com/alfamart/index).            |
+| Kioson          | Midtrans will generate a dummy Kioson Payment Code. To perform a test transaction, use the [Kioson Simulator](https://simulator.sandbox.midtrans.com/kioson/index).                  |
+
+<br />
+
+***
+
+<br />
+
+## Google Pay
+
+<br />
+
+To test, join Google Pay™ test environment [here](https://groups.google.com/g/googlepay-test-mode-stub-data). Register as member of Google Pay™ API Test Cards using the email that you will use to do the test checkout. Registration will be auto approved.
+
+After joining the test environment, test cards will automatically appear in your Google Pay™ wallet
+
+These test cards will ONLY appear when you're signed in with your registered Google Account in test environment\
+Test cards will NOT appear in production environment.
+
+<br />
+
+| Success Cards                   | Decline Cards                   |
+| :------------------------------ | :------------------------------ |
+| Visa : 4811 1111 1111 1114      | Visa: 4811 1111 1111 1114       |
+| Mastercard: 5211 1111 1111 1117 | Mastercard: 5111 1111 1111 1118 |
+
+<br />
+
+***
+
+<br />
+
+## Cardless Credit
+
+<br />
+
+| Payment Methods | Description                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------- |
+| Akulaku         | Midtrans will automatically redirect to Akulaku simulator page. Test credentials will be displayed. |
+| Kredivo         | Midtrans will automatically redirect to Kredivo simulator page. Test credentials will be displayed. |
+
+<br />
+
+***
+
+<br />
+
+## Note & Limitation
+
+<br />
+
+### Sandbox Env Should Not be Paid with Real Payment
+
+> ❗️ Warning
+>
+> * **Do not attempt to pay any transaction created in the Sandbox environment, using a real-world payment-provider/bank**.
+> * Do not expose your testing/staging environment to real customer, which may trigger such mis-payment.
+>
+> Sandbox transactions is not designed to be paid with real payment, and should only be paid  with the Sandbox Payment Simulator/Credentials explained in this page.
+>
+> **​​Midtrans is not responsible for, and may not be able to help you recover, real-world funds lost** due to this action.
+>
+> Sandbox transactions may be payable using real-world provider, but because they exist in a separate environment, payments will likely be sent to an unrecoverable destination rather than to Midtrans or, your merchant account.
+
+Explanation:
+
+A payment reference generated on Midtrans Sandbox environment (VA number, QR image, etc.), may possibly be the same reference that is also active on the payment provider’s real environment. If you make a real payment to it, the funds will be routed to the real payment provider’s environment instead, which often the funds will not reach Midtrans. So please keep the environmental difference in mind.
+
+#### QRIS Specific
+
+For QRIS payment method, usually the sandbox reference will refer to the same Merchant ID you have in your Midtrans Production environment, real payment made there can possibly be routed to your Midtrans Production account. You can try to login to your Midtrans Production account, and may find payment with Order ID formatted as: `QRIS-{generated_id}`, which you can also try to refund.

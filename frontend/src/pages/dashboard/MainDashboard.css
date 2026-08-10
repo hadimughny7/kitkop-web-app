@@ -1,0 +1,40 @@
+.main-dashboard .stats-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
+}
+
+.dashboard-welcome-card .welcome-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.welcome-emoji {
+  font-size: 3rem;
+  flex-shrink: 0;
+}
+
+.dashboard-welcome-card h2 {
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-2);
+}
+
+.dashboard-welcome-card p {
+  color: var(--neutral-500);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+@media (max-width: 1024px) {
+  .main-dashboard .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .main-dashboard .stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
