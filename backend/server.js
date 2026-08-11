@@ -69,6 +69,17 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handler
+app.use('/api/report', require('./routes/reportRoutes'));
+
+// TEMP DEBUG ROUTE
+app.get('/api/env-debug', (req, res) => {
+  res.json({
+    proxyDomain: process.env.RAILWAY_TCP_PROXY_DOMAIN,
+    proxyPort: process.env.RAILWAY_TCP_PROXY_PORT,
+    publicUrl: process.env.MYSQL_PUBLIC_URL
+  });
+});
+
 app.use(errorHandler);
 
 // Start server
