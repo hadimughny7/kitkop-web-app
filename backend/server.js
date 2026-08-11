@@ -96,7 +96,7 @@ app.get('/api/run-import', async (req, res) => {
       multipleStatements: true
     });
     
-    const sqlPath = path.join(__dirname, '../database/local_backup.sql');
+    const sqlPath = path.join(__dirname, 'local_backup.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');
     
     await connection.query(sql);
