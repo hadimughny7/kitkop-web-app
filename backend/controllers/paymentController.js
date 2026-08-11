@@ -386,9 +386,9 @@ const payCash = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
     }
 
-    if (order.status !== 'pending') {
+    if (!['pending', 'confirmed'].includes(order.status)) {
       await t.rollback();
-      return res.status(400).json({ success: false, message: 'Pesanan sudah tidak pending.' });
+      return res.status(400).json({ success: false, message: 'Pesanan tidak dapat dibayar (status: ' + order.status + ').' });
     }
 
     // Check if transaction exists

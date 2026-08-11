@@ -302,11 +302,7 @@ const OrderDashboard = () => {
                   </td>
                   <td>
                     <div className="order-actions">
-                      {o.status === 'pending' && (
-                        <button className="btn btn-primary btn-sm" onClick={() => handleUpdateStatus(o.id, 'confirmed')}>
-                          Konfirmasi
-                        </button>
-                      )}
+
                       {o.status === 'ready' && (
                         <button className="btn btn-success btn-sm" onClick={() => handleUpdateStatus(o.id, 'completed')}>
                           Selesai

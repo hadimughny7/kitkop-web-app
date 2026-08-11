@@ -119,11 +119,30 @@ const createOrder = async (req, res, next) => {
     const hasFood = orderItems.some(i => i.item_type === 'makanan' || i.item_type === 'snack');
     const hasDrink = orderItems.some(i => i.item_type === 'minuman');
 
+    // Determine cashier_id
+    let assignedCashierId = req.user ? req.user.id : null;
+    if (!assignedCashierId) {
+      // Find active kasir
+      let activeCashier = await User.findOne({ where: { role: 'kasir', is_active: true } });
+      if (!activeCashier) {
+        // Fallback to manajer or owner
+        activeCashier = await User.findOne({
+          where: {
+            role: { [Op.in]: ['manajer', 'owner'] },
+            is_active: true
+          }
+        });
+      }
+      if (activeCashier) {
+        assignedCashierId = activeCashier.id;
+      }
+    }
+
     // Create order
     const order = await Order.create({
       table_id: table_id || null,
       customer_id: customer.id,
-      cashier_id: req.user ? req.user.id : null,
+      cashier_id: assignedCashierId,
       order_number,
       status: 'pending',
       subtotal,
@@ -299,7 +318,7 @@ const updateOrderStatus = async (req, res, next) => {
     }
 
     const validTransitions = {
-      pending: ['confirmed', 'cancelled'],
+      pending: ['confirmed', 'preparing', 'cancelled'],
       confirmed: ['preparing', 'cancelled'],
       preparing: ['completed', 'cancelled'],
       completed: [],
