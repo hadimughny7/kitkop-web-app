@@ -80,6 +80,34 @@ app.get('/api/env-debug', (req, res) => {
   });
 });
 
+app.get('/api/run-import', async (req, res) => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const mysql = require('mysql2/promise');
+    
+    // Connect to internal Railway DB
+    const connection = await mysql.createConnection({
+      host: 'mysql.railway.internal',
+      user: 'root',
+      password: 'qkKEpBKRctgKGgPnUfGnchFXOxrDyjQs',
+      database: 'railway',
+      port: 3306,
+      multipleStatements: true
+    });
+    
+    const sqlPath = path.join(__dirname, '../database/local_backup.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+    
+    await connection.query(sql);
+    await connection.end();
+    
+    res.json({ success: true, message: 'Database imported successfully!' });
+  } catch (err) {
+    res.json({ success: false, error: err.message, stack: err.stack });
+  }
+});
+
 app.use(errorHandler);
 
 // Start server
