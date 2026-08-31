@@ -4,36 +4,59 @@ const { sequelize } = require('../config/database');
 const ExcelJS = require('exceljs');
 
 /**
- * Helper: get date range from period
+ * Helper: get current date/time in WIB (UTC+7)
+ */
+const getWIBNow = () => {
+  const now = new Date();
+  return new Date(now.getTime() + (7 * 60 * 60 * 1000));
+};
+
+/**
+ * Helper: get WIB date string (YYYY-MM-DD)
+ */
+const getWIBDateStr = (d) => {
+  const wib = new Date(d.getTime() + (7 * 60 * 60 * 1000));
+  return wib.toISOString().slice(0, 10);
+};
+
+/**
+ * Helper: get date range from period (WIB-aware)
  */
 const getDateRange = (period, start_date, end_date) => {
-  const now = new Date();
+  const WIB = '+07:00';
   let startDate, endDate;
 
   if (start_date && end_date) {
-    startDate = new Date(start_date);
-    endDate = new Date(end_date);
-    endDate.setHours(23, 59, 59, 999);
+    startDate = new Date(`${start_date}T00:00:00${WIB}`);
+    endDate = new Date(`${end_date}T23:59:59.999${WIB}`);
   } else {
-    endDate = new Date();
-    endDate.setHours(23, 59, 59, 999);
+    // Get today's date in WIB
+    const wibNow = getWIBNow();
+    const todayStr = wibNow.toISOString().slice(0, 10);
+    const year = wibNow.getUTCFullYear();
+    const month = String(wibNow.getUTCMonth() + 1).padStart(2, '0');
+
+    endDate = new Date(`${todayStr}T23:59:59.999${WIB}`);
 
     switch (period) {
       case 'daily':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        startDate = new Date(`${todayStr}T00:00:00${WIB}`);
         break;
-      case 'weekly':
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
+      case 'weekly': {
+        const weekAgo = new Date(wibNow);
+        weekAgo.setUTCDate(weekAgo.getUTCDate() - 7);
+        const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+        startDate = new Date(`${weekAgoStr}T00:00:00${WIB}`);
         break;
+      }
       case 'monthly':
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = new Date(`${year}-${month}-01T00:00:00${WIB}`);
         break;
       case 'yearly':
-        startDate = new Date(now.getFullYear(), 0, 1);
+        startDate = new Date(`${year}-01-01T00:00:00${WIB}`);
         break;
       default:
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        startDate = new Date(`${year}-${month}-01T00:00:00${WIB}`);
     }
   }
 
@@ -301,10 +324,11 @@ const exportStockReport = async (req, res, next) => {
  */
 const getDashboardSummary = async (req, res, next) => {
   try {
-    const today = new Date();
-    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfDay = new Date(startOfDay);
-    endOfDay.setDate(endOfDay.getDate() + 1);
+    const WIB = '+07:00';
+    const wibNow = getWIBNow();
+    const todayStr = wibNow.toISOString().slice(0, 10);
+    const startOfDay = new Date(`${todayStr}T00:00:00${WIB}`);
+    const endOfDay = new Date(`${todayStr}T23:59:59.999${WIB}`);
 
     const todayWhere = { created_at: { [Op.between]: [startOfDay, endOfDay] } };
 
