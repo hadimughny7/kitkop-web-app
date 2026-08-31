@@ -191,13 +191,18 @@ const getStockLogsByDate = async (req, res, next) => {
   try {
     const { date, type } = req.query;
 
-    // Default to today if no date provided
-    // Append T00:00:00 so JS parses as local time, not UTC
-    const targetDate = date ? new Date(date + 'T00:00:00') : new Date();
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    // Default to today in WIB (UTC+7) if no date provided
+    // Always use WIB timezone so it works on both local and UTC-based hosting
+    const WIB_OFFSET = '+07:00';
+    let dateStr = date;
+    if (!dateStr) {
+      // Get today's date in WIB
+      const now = new Date();
+      const wibNow = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+      dateStr = wibNow.toISOString().slice(0, 10);
+    }
+    const startOfDay = new Date(`${dateStr}T00:00:00${WIB_OFFSET}`);
+    const endOfDay = new Date(`${dateStr}T23:59:59.999${WIB_OFFSET}`);
 
     const where = {
       created_at: { [Op.between]: [startOfDay, endOfDay] },

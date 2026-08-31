@@ -108,6 +108,70 @@ app.get('/api/run-import', async (req, res) => {
   }
 });
 
+// TEMP: One-time migration to fix schema mismatches
+app.get('/api/run-migration-fix', async (req, res) => {
+  try {
+    const { sequelize } = require('./config/database');
+    const results = [];
+
+    // 1. Fix stock_logs ENUM to include 'refund' and 'manual_reduction'
+    try {
+      await sequelize.query("ALTER TABLE stock_logs MODIFY COLUMN type ENUM('auto_deduction','restock','manual_adjustment','refund','manual_reduction') NOT NULL");
+      results.push('✅ stock_logs.type ENUM updated');
+    } catch (e) {
+      results.push('⚠️ stock_logs.type: ' + e.message);
+    }
+
+    // 2. Fix customers.phone to allow NULL
+    try {
+      await sequelize.query("ALTER TABLE customers MODIFY COLUMN phone VARCHAR(20) NULL DEFAULT NULL");
+      results.push('✅ customers.phone set to nullable');
+    } catch (e) {
+      results.push('⚠️ customers.phone: ' + e.message);
+    }
+
+    // 3. Add cashier_id to orders if not exists
+    try {
+      await sequelize.query("ALTER TABLE orders ADD COLUMN cashier_id INT NULL AFTER order_type");
+      results.push('✅ orders.cashier_id added');
+    } catch (e) {
+      if (e.message.includes('Duplicate')) results.push('ℹ️ orders.cashier_id already exists');
+      else results.push('⚠️ orders.cashier_id: ' + e.message);
+    }
+
+    // 4. Add capacity to tables_ if not exists
+    try {
+      await sequelize.query("ALTER TABLE tables_ ADD COLUMN capacity INT DEFAULT 4 AFTER qr_code_url");
+      results.push('✅ tables_.capacity added');
+    } catch (e) {
+      if (e.message.includes('Duplicate')) results.push('ℹ️ tables_.capacity already exists');
+      else results.push('⚠️ tables_.capacity: ' + e.message);
+    }
+
+    // 5. Add status to order_items if not exists
+    try {
+      await sequelize.query("ALTER TABLE order_items ADD COLUMN status ENUM('pending','preparing','completed','rejected') DEFAULT 'pending' AFTER item_type");
+      results.push('✅ order_items.status added');
+    } catch (e) {
+      if (e.message.includes('Duplicate')) results.push('ℹ️ order_items.status already exists');
+      else results.push('⚠️ order_items.status: ' + e.message);
+    }
+
+    // 6. Add completed_at to order_items if not exists
+    try {
+      await sequelize.query("ALTER TABLE order_items ADD COLUMN completed_at DATETIME NULL DEFAULT NULL AFTER status");
+      results.push('✅ order_items.completed_at added');
+    } catch (e) {
+      if (e.message.includes('Duplicate')) results.push('ℹ️ order_items.completed_at already exists');
+      else results.push('⚠️ order_items.completed_at: ' + e.message);
+    }
+
+    res.json({ success: true, message: 'Migration completed', results });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 app.use(errorHandler);
 
 // Start server
