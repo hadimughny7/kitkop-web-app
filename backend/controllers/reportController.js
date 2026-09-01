@@ -343,6 +343,17 @@ const getDashboardSummary = async (req, res, next) => {
       raw: true,
     });
 
+    // Total cash payments today
+    const todayCashResult = await Transaction.findOne({
+      where: {
+        paid_at: { [Op.between]: [startOfDay, endOfDay] },
+        payment_method: 'CASH',
+        status: 'paid',
+      },
+      attributes: [[fn('SUM', col('amount')), 'totalCash']],
+      raw: true,
+    });
+
     const criticalStock = await RawMaterial.count({ where: { status: 'kritis' } });
     const lowStock = await RawMaterial.count({ where: { status: 'menipis' } });
 
@@ -352,6 +363,7 @@ const getDashboardSummary = async (req, res, next) => {
         todayOrders,
         activeOrders,
         todayRevenue: parseFloat(todayRevenueResult?.revenue) || 0,
+        todayCash: parseFloat(todayCashResult?.totalCash) || 0,
         criticalStock,
         lowStock,
       },

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { reportAPI } from '../../services/api';
-import { HiOutlineShoppingCart, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineExclamation } from 'react-icons/hi';
+import { HiOutlineShoppingCart, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineExclamation, HiOutlineCash } from 'react-icons/hi';
 import './MainDashboard.css';
 
 const MainDashboard = () => {
@@ -66,6 +66,16 @@ const MainDashboard = () => {
           <div>
             <p className="stat-value">{formatCurrency(stats?.todayRevenue)}</p>
             <p className="stat-label">Pendapatan Hari Ini</p>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon" style={{ background: 'var(--warning-50)', color: 'var(--warning-600)' }}>
+            <HiOutlineCash />
+          </div>
+          <div>
+            <p className="stat-value">{formatCurrency(stats?.todayCash)}</p>
+            <p className="stat-label">Total Uang Cash Hari Ini</p>
           </div>
         </div>
 
