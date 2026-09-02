@@ -121,6 +121,37 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   await testConnection();
 
+  // Auto-migrate: create settings table & add service_charge column
+  try {
+    const { Setting } = require('./models');
+    const { sequelize } = require('./config/database');
+
+    // Sync Settings table (creates if not exists)
+    await Setting.sync();
+
+    // Seed default settings if empty
+    const count = await Setting.count();
+    if (count === 0) {
+      await Setting.bulkCreate([
+        { key: 'tax_percentage', value: '10', description: 'Persentase pajak (%)' },
+        { key: 'service_charge_percentage', value: '0', description: 'Persentase service charge (%)' },
+      ]);
+      console.log('  ✅ Default settings seeded');
+    }
+
+    // Add service_charge column to orders if not exists
+    try {
+      await sequelize.query(`ALTER TABLE orders ADD COLUMN service_charge DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER tax`);
+      console.log('  ✅ service_charge column added to orders');
+    } catch (e) {
+      // Column already exists, ignore
+    }
+
+    console.log('  ✅ Settings auto-migration complete');
+  } catch (e) {
+    console.error('  ⚠️ Auto-migration warning:', e.message);
+  }
+
   server.listen(PORT, () => {
     console.log('');
     console.log('  ☕ ================================');
