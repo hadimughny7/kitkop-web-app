@@ -133,11 +133,10 @@ const CartPage = () => {
               </div>
               <div style={{
                 background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 'var(--radius-md)',
-                padding: 'var(--space-3)', marginTop: 'var(--space-3)', marginBottom: 'var(--space-3)',
-                fontSize: 'var(--text-xs)', color: '#1e40af', lineHeight: 1.5,
+                padding: '8px 12px', marginTop: 'var(--space-2)',
+                fontSize: '11px', color: '#1e40af', lineHeight: 1.4,
               }}>
-                <strong>ℹ️ Info Pembayaran:</strong><br />
-                Pembayaran melalui QR Order hanya dapat dilakukan menggunakan <strong>QRIS</strong> (GoPay, OVO, DANA, dll). Jika ingin membayar dengan <strong>uang tunai (cash)</strong>, silakan langsung pesan ke kasir.
+                ℹ️ Pembayaran via QR Order hanya bisa menggunakan <strong>QRIS</strong>. Untuk bayar <strong>cash</strong>, silakan pesan langsung ke kasir.
               </div>
               <button
                 className="btn btn-primary btn-lg checkout-btn"
