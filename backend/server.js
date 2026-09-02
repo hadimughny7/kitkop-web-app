@@ -152,6 +152,56 @@ const startServer = async () => {
     console.error('  ⚠️ Auto-migration warning:', e.message);
   }
 
+  // === Background job: Auto-cancel expired pending orders (10 min timeout) ===
+  const PAYMENT_TIMEOUT_MINUTES = 10;
+  setInterval(async () => {
+    try {
+      const { Order, OrderStatusLog, Transaction } = require('./models');
+      const { Op } = require('sequelize');
+
+      const expiredTime = new Date(Date.now() - PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
+
+      // Find pending orders that are older than 10 minutes
+      const expiredOrders = await Order.findAll({
+        where: {
+          status: 'pending',
+          created_at: { [Op.lt]: expiredTime },
+        },
+      });
+
+      for (const order of expiredOrders) {
+        order.status = 'cancelled';
+        await order.save();
+
+        await OrderStatusLog.create({
+          order_id: order.id,
+          status: 'cancelled',
+          notes: `Pesanan dibatalkan otomatis: batas waktu pembayaran ${PAYMENT_TIMEOUT_MINUTES} menit telah habis.`,
+        });
+
+        // Cancel pending transaction if exists
+        await Transaction.update(
+          { status: 'expired' },
+          { where: { order_id: order.id, status: 'pending' } }
+        );
+
+        // Emit socket event so customer page updates in real-time
+        const io = app.get('io');
+        if (io) {
+          io.emit('order-status-update', {
+            orderId: order.id,
+            orderNumber: order.order_number,
+            status: 'cancelled',
+          });
+        }
+
+        console.log(`  ⏰ Auto-cancelled expired order: ${order.order_number}`);
+      }
+    } catch (err) {
+      console.error('  ⚠️ Payment expiry job error:', err.message);
+    }
+  }, 60 * 1000); // Run every 60 seconds
+
   server.listen(PORT, () => {
     console.log('');
     console.log('  ☕ ================================');

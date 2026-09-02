@@ -22,6 +22,9 @@ const OrderStatusPage = () => {
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
   const pollIntervalRef = useRef(null);
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  const PAYMENT_TIMEOUT_MINUTES = 10;
 
   useEffect(() => {
     loadOrder();
@@ -71,6 +74,34 @@ const OrderStatusPage = () => {
         pollIntervalRef.current = null;
       }
     }
+  }, [order]);
+
+  // Countdown timer for pending orders
+  useEffect(() => {
+    if (!order || order.status !== 'pending') {
+      setTimeLeft(null);
+      return;
+    }
+
+    const calcTimeLeft = () => {
+      const createdAt = new Date(order.created_at).getTime();
+      const deadline = createdAt + PAYMENT_TIMEOUT_MINUTES * 60 * 1000;
+      const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
+      return remaining;
+    };
+
+    setTimeLeft(calcTimeLeft());
+
+    const timer = setInterval(() => {
+      const remaining = calcTimeLeft();
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(timer);
+        loadOrder(); // Reload — backend should have cancelled it
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
   }, [order]);
 
   const loadOrder = async () => {
@@ -247,6 +278,22 @@ const OrderStatusPage = () => {
             {order.status === 'pending' && (
               <div style={{ background: 'var(--neutral-50)', padding: 'var(--space-4)', borderRadius: 'var(--radius-lg)', textAlign: 'center', marginBottom: 'var(--space-6)', border: '1px solid var(--neutral-200)' }}>
                 <h3 style={{ marginBottom: 'var(--space-2)' }}>Selesaikan Pembayaran</h3>
+                {/* Countdown Timer */}
+                {timeLeft !== null && (
+                  <div style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    background: timeLeft <= 60 ? '#fef2f2' : '#fffbeb',
+                    color: timeLeft <= 60 ? '#dc2626' : '#d97706',
+                    padding: '8px 16px', borderRadius: '999px',
+                    fontWeight: 700, fontSize: 'var(--text-sm)',
+                    marginBottom: 'var(--space-3)',
+                    border: `1px solid ${timeLeft <= 60 ? '#fecaca' : '#fde68a'}`,
+                    animation: timeLeft <= 60 ? 'pulse 1s infinite' : 'none',
+                  }}>
+                    <HiOutlineClock />
+                    Batas waktu: {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
+                  </div>
+                )}
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--neutral-500)', marginBottom: 'var(--space-4)' }}>Scan QRIS di bawah ini untuk membayar pesanan Anda sejumlah <strong>{formatCurrency(order.total)}</strong></p>
                 <div style={{ background: '#fff', padding: '16px', display: 'inline-block', borderRadius: '12px', border: '1px solid var(--neutral-200)', marginBottom: 'var(--space-4)' }}>
                   {isMidtransQr ? (
