@@ -138,13 +138,23 @@ const CartPage = () => {
               }}>
                 ℹ️ Pembayaran via QR Order hanya bisa menggunakan <strong>QRIS</strong>. Untuk bayar <strong>cash</strong>, silakan pesan langsung ke kasir.
               </div>
-              <button
-                className="btn btn-primary btn-lg checkout-btn"
-                onClick={handleCheckout}
-                disabled={loading}
-              >
-                {loading ? 'Memproses...' : `Pesan Sekarang — ${formatCurrency(total)}`}
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-3)' }}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => navigate(`/order/menu?table=${tableNum}`)}
+                  style={{ width: '100%' }}
+                >
+                  + Tambah Menu Lain
+                </button>
+                <button
+                  className="btn btn-primary btn-lg"
+                  onClick={handleCheckout}
+                  disabled={loading}
+                  style={{ width: '100%' }}
+                >
+                  {loading ? 'Memproses...' : `Lanjutkan Pembayaran — ${formatCurrency(total)}`}
+                </button>
+              </div>
             </div>
           </>
         )}
