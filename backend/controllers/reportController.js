@@ -252,7 +252,7 @@ const exportOrderReport = async (req, res, next) => {
     orders.forEach((order) => {
       sheet.addRow({
         order_number: order.order_number,
-        date: order.created_at,
+        date: new Date(order.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
         customer: order.customer?.name || '-',
         table: order.table?.table_number || '-',
         type: order.order_type,
@@ -653,7 +653,9 @@ const exportReportDashboard = async (req, res, next) => {
       right: { style: 'thin', color: { argb: 'FFE5E7EB' } },
     };
 
-    const formatDateID = (d) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+    const formatDateID = (d) => new Date(d).toLocaleDateString('id-ID', { 
+      day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' 
+    });
 
     // ---- Sheet 1: Ringkasan ----
     const sheet1 = workbook.addWorksheet('Ringkasan');
