@@ -397,7 +397,7 @@ const StockManagement = () => {
             <form onSubmit={handleStockSubmit}>
               <div className="modal-body">
                 <div className="form-group"><label className="form-label">Nama Bahan</label><input className="form-input" value={stockForm.name} onChange={(e) => setStockForm({ ...stockForm, name: e.target.value })} required /></div>
-                <div className="form-group"><label className="form-label">Satuan (Misal: gram, ml, pcs)</label><input className="form-input" value={stockForm.unit} onChange={(e) => setStockForm({ ...stockForm, unit: e.target.value })} required /></div>
+                <div className="form-group"><label className="form-label">Satuan</label><select className="form-select" value={stockForm.unit} onChange={(e) => setStockForm({ ...stockForm, unit: e.target.value })} required><option value="">-- Pilih Satuan --</option><option value="gram">gram</option><option value="kg">kg</option><option value="ml">ml</option><option value="liter">liter</option><option value="pcs">pcs</option><option value="sachet">sachet</option><option value="buah">buah</option></select></div>
                 <div className="grid grid-2">
                   <div className="form-group"><label className="form-label">{editStock ? 'Stok Saat Ini' : 'Stok Awal'}</label><input type="number" className="form-input" value={stockForm.stock} onChange={(e) => setStockForm({ ...stockForm, stock: parseFloat(e.target.value) })} required /></div>
                   <div className="form-group"><label className="form-label">Batas Minimum Kritis</label><input type="number" className="form-input" value={stockForm.min_stock} onChange={(e) => setStockForm({ ...stockForm, min_stock: parseFloat(e.target.value) })} required /></div>
