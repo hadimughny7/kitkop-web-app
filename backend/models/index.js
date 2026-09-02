@@ -10,6 +10,7 @@ const OrderItem = require('./OrderItem');
 const OrderStatusLog = require('./OrderStatusLog');
 const Transaction = require('./Transaction');
 const StockLog = require('./StockLog');
+const Setting = require('./Setting');
 
 // ============================================
 // ASSOCIATIONS
@@ -79,4 +80,5 @@ module.exports = {
   OrderStatusLog,
   Transaction,
   StockLog,
+  Setting,
 };

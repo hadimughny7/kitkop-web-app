@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { settingAPI } from '../services/api';
 
 const CartContext = createContext(null);
 
@@ -13,6 +14,23 @@ export const CartProvider = ({ children }) => {
   const [tableNumber, setTableNumber] = useState('');
   const [tableId, setTableId] = useState(null);
   const [customerInfo, setCustomerInfo] = useState({ name: '', phone: '', email: '' });
+  const [taxPercent, setTaxPercent] = useState(10);
+  const [servicePercent, setServicePercent] = useState(0);
+
+  // Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await settingAPI.getAll();
+        const data = res.data.data;
+        if (data.tax_percentage !== undefined) setTaxPercent(parseFloat(data.tax_percentage));
+        if (data.service_charge_percentage !== undefined) setServicePercent(parseFloat(data.service_charge_percentage));
+      } catch (err) {
+        // Fallback to defaults silently
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const addItem = useCallback((menu) => {
     setItems((prev) => {
@@ -62,8 +80,9 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const tax = Math.round(subtotal * 0.1);
-  const total = subtotal + tax;
+  const tax = Math.round(subtotal * (taxPercent / 100));
+  const serviceCharge = Math.round(subtotal * (servicePercent / 100));
+  const total = subtotal + tax + serviceCharge;
   const itemCount = items.reduce((sum, item) => sum + item.qty, 0);
 
   return (
@@ -75,8 +94,11 @@ export const CartProvider = ({ children }) => {
         customerInfo,
         subtotal,
         tax,
+        serviceCharge,
         total,
         itemCount,
+        taxPercent,
+        servicePercent,
         setTableNumber,
         setTableId,
         setCustomerInfo,

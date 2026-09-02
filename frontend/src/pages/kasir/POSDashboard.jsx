@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { orderAPI, paymentAPI, menuAPI, categoryAPI, tableAPI } from '../../services/api';
+import { orderAPI, paymentAPI, menuAPI, categoryAPI, tableAPI, settingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCash, HiOutlinePlus, HiOutlineMinus, HiOutlineTrash, HiOutlineSearch } from 'react-icons/hi';
 import './POSDashboard.css';
@@ -17,6 +17,8 @@ const POSDashboard = () => {
   const [posCustomer, setPosCustomer] = useState({ name: '', phone: '' });
   const [posSelectedTable, setPosSelectedTable] = useState('');
   const [posSubmitting, setPosSubmitting] = useState(false);
+  const [taxPercent, setTaxPercent] = useState(10);
+  const [servicePercent, setServicePercent] = useState(0);
 
   useEffect(() => {
     loadPosData();
@@ -32,6 +34,13 @@ const POSDashboard = () => {
       setAllMenus(menuRes.data.data);
       setAllCategories(catRes.data.data);
       setAllTables(tableRes.data.data || []);
+      // Load settings
+      try {
+        const settingRes = await settingAPI.getAll();
+        const sd = settingRes.data.data;
+        if (sd.tax_percentage !== undefined) setTaxPercent(parseFloat(sd.tax_percentage));
+        if (sd.service_charge_percentage !== undefined) setServicePercent(parseFloat(sd.service_charge_percentage));
+      } catch (e) { /* fallback to defaults */ }
     } catch (err) {
       toast.error('Gagal memuat data menu.');
     } finally {
@@ -80,8 +89,9 @@ const POSDashboard = () => {
   };
 
   const posSubtotal = posCart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const posTax = Math.round(posSubtotal * 0.1);
-  const posTotal = posSubtotal + posTax;
+  const posTax = Math.round(posSubtotal * (taxPercent / 100));
+  const posServiceCharge = Math.round(posSubtotal * (servicePercent / 100));
+  const posTotal = posSubtotal + posTax + posServiceCharge;
   const posItemCount = posCart.reduce((sum, item) => sum + item.qty, 0);
 
   const handlePosSubmit = async () => {
@@ -290,9 +300,15 @@ const POSDashboard = () => {
                 <span>{formatCurrency(posSubtotal)}</span>
               </div>
               <div className="pos-summary-row">
-                <span>Pajak (10%)</span>
+                <span>Pajak ({taxPercent}%)</span>
                 <span>{formatCurrency(posTax)}</span>
               </div>
+              {posServiceCharge > 0 && (
+                <div className="pos-summary-row">
+                  <span>Service Charge ({servicePercent}%)</span>
+                  <span>{formatCurrency(posServiceCharge)}</span>
+                </div>
+              )}
               <div className="pos-summary-row pos-total">
                 <span>Total</span>
                 <span>{formatCurrency(posTotal)}</span>

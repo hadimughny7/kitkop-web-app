@@ -1,4 +1,4 @@
-const { Order, OrderItem, OrderStatusLog, Customer, Table, Menu, MenuCategory, Transaction, User } = require('../models');
+const { Order, OrderItem, OrderStatusLog, Customer, Table, Menu, MenuCategory, Transaction, User, Setting } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { refundStockForOrderItem } = require('./stockController');
@@ -112,8 +112,15 @@ const createOrder = async (req, res, next) => {
       });
     }
 
-    const tax = Math.round(subtotal * 0.10);
-    const total = subtotal + tax;
+    // Fetch tax & service charge percentages from settings
+    const taxSetting = await Setting.findByPk('tax_percentage');
+    const serviceSetting = await Setting.findByPk('service_charge_percentage');
+    const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
+    const serviceRate = serviceSetting ? parseFloat(serviceSetting.value) / 100 : 0;
+
+    const tax = Math.round(subtotal * taxRate);
+    const service_charge = Math.round(subtotal * serviceRate);
+    const total = subtotal + tax + service_charge;
     const order_number = await generateOrderNumber();
 
     const hasFood = orderItems.some(i => i.item_type === 'makanan' || i.item_type === 'snack');
@@ -147,6 +154,7 @@ const createOrder = async (req, res, next) => {
       status: 'pending',
       subtotal,
       tax,
+      service_charge,
       total,
       order_type: order_type || 'qr',
     }, { transaction: t });
@@ -421,13 +429,20 @@ const rejectOrderItem = async (req, res, next) => {
       order.status = 'cancelled';
     }
 
-    // Tax is 10%
+    // Fetch tax & service charge percentages from settings
+    const taxSetting = await Setting.findByPk('tax_percentage');
+    const serviceSetting = await Setting.findByPk('service_charge_percentage');
+    const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
+    const serviceRate = serviceSetting ? parseFloat(serviceSetting.value) / 100 : 0;
+
     const subtotal = activeTotal;
-    const tax = subtotal * 0.1;
-    const total = subtotal + tax;
+    const tax = Math.round(subtotal * taxRate);
+    const service_charge = Math.round(subtotal * serviceRate);
+    const total = subtotal + tax + service_charge;
 
     order.subtotal = subtotal;
     order.tax = tax;
+    order.service_charge = service_charge;
     order.total = total;
 
     await order.save({ transaction: t });

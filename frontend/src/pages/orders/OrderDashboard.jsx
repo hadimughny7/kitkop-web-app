@@ -447,9 +447,15 @@ const OrderDashboard = () => {
                   <span>{formatCurrency(detailOrder.subtotal)}</span>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: 'var(--text-sm)' }}>
-                  <span>Pajak (10%)</span>
+                  <span>Pajak</span>
                   <span>{formatCurrency(detailOrder.tax)}</span>
                 </div>
+                {parseFloat(detailOrder.service_charge) > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px', fontSize: 'var(--text-sm)' }}>
+                    <span>Service Charge</span>
+                    <span>{formatCurrency(detailOrder.service_charge)}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 'var(--text-lg)', borderTop: '1px solid var(--neutral-200)', paddingTop: '8px', marginTop: '4px' }}>
                   <span>Total</span>
                   <span style={{ color: 'var(--primary-600)' }}>{formatCurrency(detailOrder.total)}</span>
@@ -534,9 +540,15 @@ const OrderDashboard = () => {
               <span>{formatCurrency(printOrder.subtotal)}</span>
             </div>
             <div className="receipt-total-row">
-              <span>Pajak (10%)</span>
+              <span>Pajak</span>
               <span>{formatCurrency(printOrder.tax)}</span>
             </div>
+            {parseFloat(printOrder.service_charge) > 0 && (
+              <div className="receipt-total-row">
+                <span>Service Charge</span>
+                <span>{formatCurrency(printOrder.service_charge)}</span>
+              </div>
+            )}
             <div className="receipt-total-row grand-total">
               <span>TOTAL</span>
               <span>{formatCurrency(printOrder.total)}</span>

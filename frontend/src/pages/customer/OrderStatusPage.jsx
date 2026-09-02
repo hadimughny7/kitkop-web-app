@@ -335,9 +335,15 @@ const OrderStatusPage = () => {
                 <span>{formatCurrency(order.subtotal)}</span>
               </div>
               <div className="summary-row">
-                <span>Pajak (10%)</span>
+                <span>Pajak</span>
                 <span>{formatCurrency(order.tax)}</span>
               </div>
+              {parseFloat(order.service_charge) > 0 && (
+                <div className="summary-row">
+                  <span>Service Charge</span>
+                  <span>{formatCurrency(order.service_charge)}</span>
+                </div>
+              )}
               <div className="summary-row total">
                 <span>Total</span>
                 <span>{formatCurrency(order.total)}</span>

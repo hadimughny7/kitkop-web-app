@@ -14,6 +14,7 @@ import {
   HiOutlineTable,
   HiOutlineTag,
   HiOutlineBeaker,
+  HiOutlineCog,
 } from 'react-icons/hi';
 import { useState } from 'react';
 import './DashboardLayout.css';
@@ -88,6 +89,12 @@ const DashboardLayout = () => {
       label: 'Pengguna',
       icon: <HiOutlineUsers />,
       path: '/dashboard/users',
+      roles: ['owner', 'manajer'],
+    },
+    {
+      label: 'Pengaturan',
+      icon: <HiOutlineCog />,
+      path: '/dashboard/settings',
       roles: ['owner', 'manajer'],
     },
   ];

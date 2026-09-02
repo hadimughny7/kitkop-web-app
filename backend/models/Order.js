@@ -36,6 +36,11 @@ const Order = sequelize.define('Order', {
     allowNull: false,
     defaultValue: 0,
   },
+  service_charge: {
+    type: DataTypes.DECIMAL(12, 2),
+    allowNull: false,
+    defaultValue: 0,
+  },
   total: {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false,

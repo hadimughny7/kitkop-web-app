@@ -24,6 +24,7 @@ const stockRoutes = require('./routes/stockRoutes');
 const recipeRoutes = require('./routes/recipeRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const settingRoutes = require('./routes/settingRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -62,6 +63,7 @@ app.use('/api/stocks', stockRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/settings', settingRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

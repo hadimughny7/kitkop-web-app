@@ -156,4 +156,12 @@ export const reportAPI = {
   exportReportDashboard: (params) => api.get('/reports/report-dashboard/export', { params, responseType: 'blob' }),
 };
 
+// ============================================
+// SETTINGS
+// ============================================
+export const settingAPI = {
+  getAll: () => api.get('/settings'),
+  update: (data) => api.put('/settings', data),
+};
+
 export default api;

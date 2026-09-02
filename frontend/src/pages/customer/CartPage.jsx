@@ -12,7 +12,8 @@ const CartPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const {
-    items, subtotal, tax, total, tableId, customerInfo,
+    items, subtotal, tax, serviceCharge, total, tableId, customerInfo,
+    taxPercent, servicePercent,
     updateQty, updateNotes, removeItem, clearCart,
   } = useCart();
 
@@ -117,9 +118,15 @@ const CartPage = () => {
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className="summary-row">
-                <span>Pajak (10%)</span>
+                <span>Pajak ({taxPercent}%)</span>
                 <span>{formatCurrency(tax)}</span>
               </div>
+              {serviceCharge > 0 && (
+                <div className="summary-row">
+                  <span>Service Charge ({servicePercent}%)</span>
+                  <span>{formatCurrency(serviceCharge)}</span>
+                </div>
+              )}
               <div className="summary-row total">
                 <span>Total</span>
                 <span>{formatCurrency(total)}</span>

@@ -27,6 +27,7 @@ import StockHistory from './pages/stocks/StockHistory';
 import UserManagement from './pages/users/UserManagement';
 import ReportDashboard from './pages/reports/ReportDashboard';
 import TableManagement from './pages/tables/TableManagement';
+import SettingsPage from './pages/settings/SettingsPage';
 
 function App() {
   return (
@@ -67,6 +68,7 @@ function App() {
               {/* Order Dashboard */}
               <Route path="orders" element={<ProtectedRoute roles={['owner', 'manajer', 'kasir']}><OrderDashboard /></ProtectedRoute>} />
               <Route path="tables" element={<ProtectedRoute roles={['owner', 'manajer', 'kasir']}><TableManagement /></ProtectedRoute>} />
+              <Route path="settings" element={<ProtectedRoute roles={['owner', 'manajer']}><SettingsPage /></ProtectedRoute>} />
             </Route>
 
             {/* Fallback */}
