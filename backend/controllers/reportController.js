@@ -607,6 +607,28 @@ const exportReportDashboard = async (req, res, next) => {
       order: [['name', 'ASC']],
     });
 
+    // Stock Movements for new sheets
+    const stockMovements = await sequelize.query(`
+      SELECT 
+        DATE(sl.created_at) AS date,
+        sl.type,
+        rm.name AS material_name,
+        rm.unit AS material_unit,
+        SUM(sl.change_qty) AS total_qty
+      FROM stock_logs sl
+      JOIN raw_materials rm ON sl.raw_material_id = rm.id
+      WHERE sl.created_at BETWEEN :startDate AND :endDate
+      GROUP BY DATE(sl.created_at), sl.type, rm.id, rm.name, rm.unit
+      ORDER BY DATE(sl.created_at) ASC, rm.name ASC
+    `, {
+      replacements: { startDate, endDate },
+      type: sequelize.QueryTypes.SELECT
+    });
+
+    const restockMovements = stockMovements.filter(m => ['restock', 'refund'].includes(m.type) && parseFloat(m.total_qty) > 0);
+    const autoDeductMovements = stockMovements.filter(m => m.type === 'auto_deduction' && parseFloat(m.total_qty) < 0);
+    const manualDeductMovements = stockMovements.filter(m => m.type === 'manual_reduction' && parseFloat(m.total_qty) < 0);
+
     // === BUILD EXCEL ===
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'Cafe Kitkop System';
@@ -748,6 +770,48 @@ const exportReportDashboard = async (req, res, next) => {
       }
     });
 
+    // ---- Helper for Movement Sheets ----
+    const addMovementSheet = (sheetName, data, isDeduction = false) => {
+      const sheet = workbook.addWorksheet(sheetName);
+      sheet.columns = [
+        { header: 'No', key: 'no', width: 8 },
+        { header: 'Tanggal', key: 'date', width: 20 },
+        { header: 'Bahan Baku', key: 'material_name', width: 25 },
+        { header: isDeduction ? 'Jumlah Keluar' : 'Jumlah Masuk', key: 'qty', width: 18 },
+        { header: 'Satuan', key: 'unit', width: 12 },
+      ];
+
+      sheet.getRow(1).eachCell((cell) => {
+        Object.assign(cell, headerStyle);
+        cell.font = headerStyle.font;
+        cell.fill = headerStyle.fill;
+        cell.alignment = headerStyle.alignment;
+        cell.border = headerStyle.border;
+      });
+
+      data.forEach((row, idx) => {
+        const dataRow = sheet.addRow({
+          no: idx + 1,
+          date: formatDateID(row.date),
+          material_name: row.material_name,
+          qty: isDeduction ? Math.abs(parseFloat(row.total_qty)) : parseFloat(row.total_qty),
+          unit: row.material_unit,
+        });
+        dataRow.eachCell((cell) => { cell.border = cellBorder; });
+      });
+
+      return sheet;
+    };
+
+    // ---- Sheet 4: Penambahan Stok ----
+    const sheet4 = addMovementSheet('Penambahan Stok', restockMovements, false);
+
+    // ---- Sheet 5: Pengurangan Otomatis ----
+    const sheet5 = addMovementSheet('Pengurangan Otomatis', autoDeductMovements, true);
+
+    // ---- Sheet 6: Pengurangan Manual ----
+    const sheet6 = addMovementSheet('Pengurangan Manual', manualDeductMovements, true);
+
     // === PROTECT ALL SHEETS ===
     const protectionOptions = {
       selectLockedCells: true,
@@ -766,7 +830,7 @@ const exportReportDashboard = async (req, res, next) => {
     };
 
     // Lock all cells in each sheet
-    [sheet1, sheet2, sheet3].forEach((sheet) => {
+    [sheet1, sheet2, sheet3, sheet4, sheet5, sheet6].forEach((sheet) => {
       sheet.eachRow((row) => {
         row.eachCell((cell) => {
           cell.protection = { locked: true };
