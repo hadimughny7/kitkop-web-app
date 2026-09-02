@@ -116,12 +116,12 @@ const getOrderReport = async (req, res, next) => {
     const dailyTrend = await Order.findAll({
       where: { ...where, status: { [Op.ne]: 'cancelled' } },
       attributes: [
-        [fn('DATE', col('created_at')), 'date'],
+        [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'date'],
         [fn('COUNT', col('id')), 'order_count'],
         [fn('SUM', col('total')), 'revenue'],
       ],
-      group: [fn('DATE', col('created_at'))],
-      order: [[fn('DATE', col('created_at')), 'ASC']],
+      group: [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))')],
+      order: [[literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'ASC']],
       raw: true,
     });
 
@@ -433,8 +433,8 @@ const getReportDashboard = async (req, res, next) => {
       chartLabelExpr = [fn('MONTH', col('created_at')), 'label'];
     } else {
       // Group by date (weekly, monthly, custom)
-      chartGroupExpr = fn('DATE', col('created_at'));
-      chartLabelExpr = [fn('DATE', col('created_at')), 'label'];
+      chartGroupExpr = literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))');
+      chartLabelExpr = [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'label'];
     }
 
     const chartData = await Order.findAll({
@@ -481,19 +481,19 @@ const getReportDashboard = async (req, res, next) => {
     const dailySales = await Order.findAll({
       where: { created_at: { [Op.between]: [startDate, endDate] }, status: 'completed' },
       attributes: [
-        [fn('DATE', col('created_at')), 'date'],
+        [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'date'],
         [fn('COUNT', col('id')), 'transaction_count'],
         [fn('SUM', col('total')), 'total_revenue'],
       ],
-      group: [fn('DATE', col('created_at'))],
-      order: [[fn('DATE', col('created_at')), 'ASC']],
+      group: [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))')],
+      order: [[literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'ASC']],
       raw: true,
     });
 
     // Get menu items sold per day — separate query
     const dailyItemsSold = await OrderItem.findAll({
       attributes: [
-        [fn('DATE', col('order.created_at')), 'date'],
+        [literal('DATE(DATE_ADD(`order`.created_at, INTERVAL 7 HOUR))'), 'date'],
         [fn('SUM', col('OrderItem.qty')), 'items_sold'],
       ],
       include: [{
@@ -502,7 +502,7 @@ const getReportDashboard = async (req, res, next) => {
         attributes: [],
         where: { created_at: { [Op.between]: [startDate, endDate] }, status: 'completed' },
       }],
-      group: [fn('DATE', col('order.created_at'))],
+      group: [literal('DATE(DATE_ADD(`order`.created_at, INTERVAL 7 HOUR))')],
       raw: true,
     });
 
@@ -576,25 +576,25 @@ const exportReportDashboard = async (req, res, next) => {
     const dailySales = await Order.findAll({
       where: { created_at: { [Op.between]: [startDate, endDate] }, status: 'completed' },
       attributes: [
-        [fn('DATE', col('created_at')), 'date'],
+        [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'date'],
         [fn('COUNT', col('id')), 'transaction_count'],
         [fn('SUM', col('total')), 'total_revenue'],
       ],
-      group: [fn('DATE', col('created_at'))],
-      order: [[fn('DATE', col('created_at')), 'ASC']],
+      group: [literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))')],
+      order: [[literal('DATE(DATE_ADD(created_at, INTERVAL 7 HOUR))'), 'ASC']],
       raw: true,
     });
 
     const dailyItemsSold = await OrderItem.findAll({
       attributes: [
-        [fn('DATE', col('order.created_at')), 'date'],
+        [literal('DATE(DATE_ADD(`order`.created_at, INTERVAL 7 HOUR))'), 'date'],
         [fn('SUM', col('OrderItem.qty')), 'items_sold'],
       ],
       include: [{
         model: Order, as: 'order', attributes: [],
         where: { created_at: { [Op.between]: [startDate, endDate] }, status: 'completed' },
       }],
-      group: [fn('DATE', col('order.created_at'))],
+      group: [literal('DATE(DATE_ADD(`order`.created_at, INTERVAL 7 HOUR))')],
       raw: true,
     });
 
@@ -610,7 +610,7 @@ const exportReportDashboard = async (req, res, next) => {
     // Stock Movements for new sheets
     const stockMovements = await sequelize.query(`
       SELECT 
-        DATE(sl.created_at) AS date,
+        DATE(DATE_ADD(sl.created_at, INTERVAL 7 HOUR)) AS date,
         sl.type,
         rm.name AS material_name,
         rm.unit AS material_unit,
@@ -618,8 +618,8 @@ const exportReportDashboard = async (req, res, next) => {
       FROM stock_logs sl
       JOIN raw_materials rm ON sl.raw_material_id = rm.id
       WHERE sl.created_at BETWEEN :startDate AND :endDate
-      GROUP BY DATE(sl.created_at), sl.type, rm.id, rm.name, rm.unit
-      ORDER BY DATE(sl.created_at) ASC, rm.name ASC
+      GROUP BY DATE(DATE_ADD(sl.created_at, INTERVAL 7 HOUR)), sl.type, rm.id, rm.name, rm.unit
+      ORDER BY DATE(DATE_ADD(sl.created_at, INTERVAL 7 HOUR)) ASC, rm.name ASC
     `, {
       replacements: { startDate, endDate },
       type: sequelize.QueryTypes.SELECT
