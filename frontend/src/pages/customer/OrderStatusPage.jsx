@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
-import { HiCheck, HiOutlineClock } from 'react-icons/hi';
+import { HiCheck, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
+import { useCart } from '../../context/CartContext';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
 import './CustomerPages.css';
@@ -15,6 +16,8 @@ const statusSteps = [
 
 const OrderStatusPage = () => {
   const { orderNumber } = useParams();
+  const navigate = useNavigate();
+  const { tableNumber, clearCart } = useCart();
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -349,6 +352,22 @@ const OrderStatusPage = () => {
                 <span>{formatCurrency(order.total)}</span>
               </div>
             </div>
+
+            {/* Pesan Lagi Button — show when order is not pending */}
+            {order.status !== 'pending' && order.status !== 'cancelled' && tableNumber && (
+              <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
+                <button
+                  className="btn btn-primary btn-lg"
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)' }}
+                  onClick={() => { clearCart(); navigate(`/order/menu?table=${tableNumber}`); }}
+                >
+                  <HiOutlineRefresh /> Pesan Lagi
+                </button>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', marginTop: 'var(--space-2)' }}>
+                  Pesan menu lainnya tanpa perlu scan QR lagi
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
