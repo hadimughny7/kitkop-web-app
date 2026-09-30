@@ -21,7 +21,7 @@ const OrderStatusPage = () => {
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
-  const pollIntervalRef = useRef(null);
+
   const [timeLeft, setTimeLeft] = useState(null);
 
   const PAYMENT_TIMEOUT_MINUTES = 10;
@@ -47,33 +47,38 @@ const OrderStatusPage = () => {
       if (data.orderId === order?.id) {
         toast.success('Pembayaran berhasil!');
         loadOrder();
-        // Stop polling when payment is confirmed via socket
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
       }
     });
 
     return () => {
       socket.disconnect();
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
     };
   }, [orderNumber]);
 
   useEffect(() => {
     if (order && order.status === 'pending') {
       checkOrCreatePayment();
-      startPaymentPolling();
-    } else {
-      // Stop polling if order is no longer pending
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-        pollIntervalRef.current = null;
-      }
     }
+  }, [order]);
+
+  // Lightweight polling fallback: check local DB every 5s in case socket event was missed
+  useEffect(() => {
+    if (!order || order.status !== 'pending') return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await paymentAPI.getStatus(order.id);
+        if (res.data.data.status === 'paid') {
+          toast.success('Pembayaran berhasil!');
+          loadOrder();
+          clearInterval(pollInterval);
+        }
+      } catch (err) {
+        // ignore
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
   }, [order]);
 
   // Countdown timer for pending orders
@@ -143,26 +148,7 @@ const OrderStatusPage = () => {
     }
   };
 
-  // Poll payment status every 5 seconds as fallback for webhook
-  const startPaymentPolling = () => {
-    if (pollIntervalRef.current) return; // Already polling
 
-    pollIntervalRef.current = setInterval(async () => {
-      if (!order) return;
-      try {
-        const res = await paymentAPI.getStatus(order.id);
-        setPayment(res.data.data);
-        if (res.data.data.status === 'paid') {
-          toast.success('Pembayaran berhasil!');
-          loadOrder();
-          clearInterval(pollIntervalRef.current);
-          pollIntervalRef.current = null;
-        }
-      } catch (err) {
-        // Ignore polling errors
-      }
-    }, 5000);
-  };
 
   const handleSimulatePayment = async () => {
     if (!order) return;
@@ -245,10 +231,11 @@ const OrderStatusPage = () => {
   const estimatedMinutes = getEstimatedMinutes();
   const progress = getItemProgress();
 
-  // Determine QR source: use qr_url from Midtrans, fallback to qris_content
-  const qrImageUrl = payment?.qr_url || null;
-  const isMidtransQr = qrImageUrl && !qrImageUrl.startsWith('mock-');
+  // Determine QR source: use qr_url from KuyzPay, fallback to qris_content
+  const qrImageUrl = payment?.qr_url || payment?.qris_content || null;
+  const isKuyzPayQr = qrImageUrl && !qrImageUrl.startsWith('mock-') && qrImageUrl.startsWith('http');
   const isFallbackMock = payment?.qris_content?.startsWith('mock-');
+  const payUrl = payment?.pay_url || null;
 
   return (
     <div className="customer-page order-status-page">
@@ -296,7 +283,7 @@ const OrderStatusPage = () => {
                 )}
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--neutral-500)', marginBottom: 'var(--space-4)' }}>Scan QRIS di bawah ini untuk membayar pesanan Anda sejumlah <strong>{formatCurrency(order.total)}</strong></p>
                 <div style={{ background: '#fff', padding: '16px', display: 'inline-block', borderRadius: '12px', border: '1px solid var(--neutral-200)', marginBottom: 'var(--space-4)' }}>
-                  {isMidtransQr ? (
+                  {isKuyzPayQr ? (
                     <img
                       src={qrImageUrl}
                       alt="QRIS Payment QR Code"
@@ -304,8 +291,8 @@ const OrderStatusPage = () => {
                     />
                   ) : isFallbackMock ? (
                     <div style={{ width: 200, padding: 'var(--space-4)', background: '#fee2e2', borderRadius: '8px', color: '#b91c1c', textAlign: 'left' }}>
-                      <p style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>❌ Midtrans Error (402)</p>
-                      <p style={{ fontSize: '12px' }}>Midtrans Core API untuk QRIS di akun Sandbox Anda belum diaktifkan. Silakan hubungi Midtrans atau aktifkan dari dashboard.</p>
+                      <p style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>❌ KuyzPay Error</p>
+                      <p style={{ fontSize: '12px' }}>Gagal membuat QRIS. Silakan coba lagi atau hubungi admin.</p>
                     </div>
                   ) : (
                     <div style={{ width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--neutral-100)', borderRadius: '8px', flexDirection: 'column', gap: '8px' }}>
@@ -314,17 +301,26 @@ const OrderStatusPage = () => {
                     </div>
                   )}
                 </div>
-                {isMidtransQr && (
+                {isKuyzPayQr && (
                   <p style={{ fontSize: '12px', color: 'var(--neutral-400)', marginBottom: 'var(--space-3)' }}>
                     Gunakan GoPay, OVO, DANA, atau aplikasi e-wallet lainnya
                   </p>
                 )}
 
-                {/* Polling indicator */}
-                {isMidtransQr && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: 'var(--space-3)' }}>
-                    <div className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }}></div>
-                    <span style={{ fontSize: '12px', color: 'var(--neutral-400)' }}>Menunggu pembayaran...</span>
+
+
+                {/* KuyzPay hosted checkout link */}
+                {payUrl && (
+                  <div style={{ marginBottom: 'var(--space-3)' }}>
+                    <a
+                      href={payUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-outline"
+                      style={{ width: '100%', display: 'block', textAlign: 'center', textDecoration: 'none' }}
+                    >
+                      Bayar via Link Pembayaran
+                    </a>
                   </div>
                 )}
 

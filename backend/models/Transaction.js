@@ -37,6 +37,10 @@ const Transaction = sequelize.define('Transaction', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  pay_url: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
   paid_at: {
     type: DataTypes.DATE,
     allowNull: true,

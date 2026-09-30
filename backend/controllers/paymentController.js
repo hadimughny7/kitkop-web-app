@@ -1,18 +1,17 @@
-const midtransClient = require('midtrans-client');
+const axios = require('axios');
+const crypto = require('crypto');
 const { Transaction, Order, OrderItem } = require('../models');
 const { deductStockForOrder } = require('./stockController');
 const { sequelize } = require('../config/database');
 
-// Initialize Midtrans Core API client
-const coreApi = new midtransClient.CoreApi({
-  isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-  serverKey: process.env.MIDTRANS_SERVER_KEY,
-  clientKey: process.env.MIDTRANS_CLIENT_KEY,
-});
+// KuyzPay configuration
+const KUYZPAY_MERCHANT_ID = process.env.KUYZPAY_MERCHANT_ID;
+const KUYZPAY_SECRET = process.env.KUYZPAY_SECRET;
+const KUYZPAY_BASE_URL = process.env.KUYZPAY_BASE_URL || 'https://api.kuyzpay.xyz/api/v1';
 
 /**
  * POST /api/payments/create-qris
- * Generate QRIS payment via Midtrans Core API
+ * Generate QRIS payment via KuyzPay API
  */
 const createQrisPayment = async (req, res, next) => {
   try {
@@ -39,47 +38,58 @@ const createQrisPayment = async (req, res, next) => {
           ref_id: existingTrx.ref_id,
           amount: parseFloat(existingTrx.amount),
           qr_url: existingTrx.qris_content,
+          pay_url: existingTrx.pay_url || null,
           status: existingTrx.status,
         },
       });
     }
 
-    const orderId = `KTK-${order.id}-${Date.now()}`;
+    const refId = `KTK-${order.id}-${Date.now()}`;
     const grossAmount = Math.round(parseFloat(order.total));
 
-    // Call Midtrans Core API
-    const chargeParams = {
-      payment_type: 'qris',
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: grossAmount,
-      },
-      qris: {
-        acquirer: 'gopay',
-      },
+    // Call KuyzPay API to create order
+    const kuyzpayPayload = {
+      merchant_id: KUYZPAY_MERCHANT_ID,
+      secret: KUYZPAY_SECRET,
+      ref_id: refId,
+      amount: grossAmount,
+      channel: 'QRIS',
+      customer_name: order.customer_name || 'Customer',
+      expire_minutes: 10,
     };
 
-    const chargeResponse = await coreApi.charge(chargeParams);
+    console.log('[KuyzPay] Creating order:', { ref_id: refId, amount: grossAmount });
 
-    // Extract QR URL from response
-    let qrUrl = null;
-    if (chargeResponse.actions && chargeResponse.actions.length > 0) {
-      const qrAction = chargeResponse.actions.find(
-        (action) => action.name === 'generate-qr-code'
-      );
-      if (qrAction) {
-        qrUrl = qrAction.url;
-      }
+    const kuyzpayRes = await axios.post(`${KUYZPAY_BASE_URL}/order`, kuyzpayPayload, {
+      headers: { 'Content-Type': 'application/json' },
+      timeout: 15000,
+    });
+
+    const kuyzpayData = kuyzpayRes.data;
+    console.log('[KuyzPay] Response:', JSON.stringify(kuyzpayData, null, 2));
+
+    if (kuyzpayData.status !== 1 && kuyzpayData.status !== 'Success') {
+      throw new Error(`KuyzPay error: ${kuyzpayData.message || 'Unknown error'}`);
     }
+
+    const orderData = kuyzpayData.data;
+
+    // qr_link is a URL to a QR image, qr_string is for rendering locally
+    const qrUrl = orderData.qr_link || null;
+    const qrString = orderData.qr_string || null;
+    const payUrl = orderData.pay_url || null;
+    const kuyzpayTrxId = orderData.trx_id || null;
+    const totalBayar = orderData.total_bayar || grossAmount;
 
     // Save or update transaction
     const trxData = {
-      ref_id: orderId,
-      trx_id: chargeResponse.transaction_id || null,
-      amount: grossAmount,
+      ref_id: refId,
+      trx_id: kuyzpayTrxId,
+      amount: totalBayar,
       payment_method: 'QRIS',
       status: 'pending',
-      qris_content: qrUrl,
+      qris_content: qrUrl || qrString,
+      pay_url: payUrl,
     };
 
     let trx;
@@ -91,19 +101,22 @@ const createQrisPayment = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'QRIS berhasil dibuat via Midtrans.',
+      message: 'QRIS berhasil dibuat via KuyzPay.',
       data: {
         transaction_id: trx.id,
         ref_id: trx.ref_id,
-        trx_id: trx.trx_id,
+        trx_id: kuyzpayTrxId,
         qr_url: qrUrl,
+        qr_string: qrString,
+        pay_url: payUrl,
+        total_bayar: totalBayar,
         status: trx.status,
       },
     });
   } catch (error) {
-    console.error('Midtrans charge error:', error.message);
+    console.error('[KuyzPay] Charge error:', error.response?.data || error.message);
 
-    // Fallback: create mock transaction if Midtrans fails
+    // Fallback: create mock transaction if KuyzPay fails
     try {
       const { order_id } = req.body;
       const order = await Order.findByPk(order_id);
@@ -124,7 +137,7 @@ const createQrisPayment = async (req, res, next) => {
 
       return res.json({
         success: true,
-        message: 'QRIS dibuat (mode fallback — Midtrans tidak tersedia).',
+        message: 'QRIS dibuat (mode fallback — KuyzPay tidak tersedia).',
         data: {
           transaction_id: trx.id,
           ref_id: trx.ref_id,
@@ -142,93 +155,154 @@ const createQrisPayment = async (req, res, next) => {
 
 /**
  * POST /api/payments/callback
- * Midtrans webhook/notification handler
+ * KuyzPay webhook/notification handler
  */
 const paymentCallback = async (req, res, next) => {
   try {
-    const notification = req.body;
+    const rawBody = JSON.stringify(req.body);
+    const signature = req.headers['x-kuyzpay-signature'];
+    const event = req.headers['x-kuyzpay-event'] || req.body.event;
 
-    // Verify notification with Midtrans
-    const statusResponse = await coreApi.transaction.notification(notification);
+    console.log(`[KuyzPay Webhook] Event: ${event}, Signature present: ${!!signature}`);
 
-    const midtransOrderId = statusResponse.order_id;
-    const transactionStatus = statusResponse.transaction_status;
-    const fraudStatus = statusResponse.fraud_status;
-
-    console.log(`[Midtrans Webhook] Order: ${midtransOrderId}, Status: ${transactionStatus}, Fraud: ${fraudStatus}`);
-
-    // Find transaction by ref_id (which is our midtrans order_id)
-    const trx = await Transaction.findOne({ where: { ref_id: midtransOrderId } });
-    if (!trx) {
-      console.warn(`[Midtrans Webhook] Transaction not found for order_id: ${midtransOrderId}`);
-      return res.status(200).json({ success: true, message: 'Transaction not found, ignored.' });
-    }
-
-    // Process based on transaction status
-    if (transactionStatus === 'settlement' || transactionStatus === 'capture') {
-      if (fraudStatus === 'accept' || !fraudStatus) {
-        // Payment successful
-        const t = await sequelize.transaction();
-        try {
-          trx.status = 'paid';
-          trx.paid_at = new Date();
-          trx.trx_id = statusResponse.transaction_id;
-          await trx.save({ transaction: t });
-
-          // Update order status to confirmed
-          const order = await Order.findByPk(trx.order_id, {
-            include: [{ model: OrderItem, as: 'items' }],
-            transaction: t,
-          });
-
-          if (order && order.status === 'pending') {
-            order.status = 'confirmed';
-            await order.save({ transaction: t });
-
-            // Deduct stock
-            if (order.items && order.items.length > 0) {
-              await deductStockForOrder(order.id, order.items, t);
-            }
+    // Verify HMAC-SHA256 signature if present
+    if (signature && KUYZPAY_SECRET) {
+      const expected = crypto.createHmac('sha256', KUYZPAY_SECRET).update(rawBody).digest('hex');
+      try {
+        const isValid = crypto.timingSafeEqual(
+          Buffer.from(signature, 'hex'),
+          Buffer.from(expected, 'hex')
+        );
+        if (!isValid) {
+          console.warn('[KuyzPay Webhook] Invalid signature');
+          return res.status(200).json({ status: true, message: 'Invalid signature, ignored.' });
+        }
+      } catch (e) {
+        // Also verify legacy MD5 signature from body
+        const md5Sig = req.body.signature;
+        if (md5Sig) {
+          const md5Expected = crypto.createHash('md5')
+            .update(`${KUYZPAY_MERCHANT_ID}:${KUYZPAY_SECRET}:${req.body.reff_id || req.body.ref_id}`)
+            .digest('hex');
+          if (md5Sig !== md5Expected) {
+            console.warn('[KuyzPay Webhook] Invalid MD5 signature');
           }
-
-          await t.commit();
-
-          // Emit socket events
-          const io = req.app.get('io');
-          if (io) {
-            io.emit('payment-success', { orderId: trx.order_id, ref_id: midtransOrderId });
-            io.emit('order-status-update', {
-              orderId: trx.order_id,
-              status: 'confirmed',
-            });
-            io.emit('stock-updated');
-          }
-        } catch (dbError) {
-          await t.rollback();
-          throw dbError;
         }
       }
-    } else if (transactionStatus === 'expire') {
+    }
+
+    const webhookData = req.body;
+    const kuyzpayStatus = webhookData.status;
+    const refId = webhookData.reff_id || webhookData.ref_id || webhookData.data?.ref_id;
+    const kuyzpayTrxId = webhookData.reference || webhookData.data?.trx_id;
+
+    console.log(`[KuyzPay Webhook] ref_id: ${refId}, status: ${kuyzpayStatus}`);
+
+    // Find transaction by ref_id
+    const trx = await Transaction.findOne({ where: { ref_id: refId } });
+    if (!trx) {
+      console.warn(`[KuyzPay Webhook] Transaction not found for ref_id: ${refId}`);
+      return res.status(200).json({ status: true, message: 'Transaction not found, ignored.' });
+    }
+
+    // Process based on event/status
+    if (event === 'payment.success' || kuyzpayStatus === 'Success' || kuyzpayStatus === 'Completed') {
+      const t = await sequelize.transaction();
+      try {
+        trx.status = 'paid';
+        trx.paid_at = new Date();
+        if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
+        await trx.save({ transaction: t });
+
+        // Update order status to confirmed
+        const order = await Order.findByPk(trx.order_id, {
+          include: [{ model: OrderItem, as: 'items' }],
+          transaction: t,
+        });
+
+        if (order && order.status === 'pending') {
+          order.status = 'confirmed';
+          await order.save({ transaction: t });
+
+          // Deduct stock
+          if (order.items && order.items.length > 0) {
+            await deductStockForOrder(order.id, order.items, t);
+          }
+        }
+
+        await t.commit();
+
+        // Emit socket events
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('payment-success', { orderId: trx.order_id, ref_id: refId });
+          io.emit('order-status-update', {
+            orderId: trx.order_id,
+            status: 'confirmed',
+          });
+          io.emit('stock-updated');
+        }
+      } catch (dbError) {
+        await t.rollback();
+        throw dbError;
+      }
+    } else if (event === 'payment.expired' || kuyzpayStatus === 'Expired') {
       trx.status = 'expired';
       await trx.save();
-    } else if (transactionStatus === 'cancel' || transactionStatus === 'deny') {
+    } else if (event === 'payment.cancelled' || kuyzpayStatus === 'Cancelled') {
       trx.status = 'failed';
       await trx.save();
-    }
-    // pending status — no action needed
+    } else if (event === 'payment.late' || kuyzpayStatus === 'PaidLate') {
+      // Late payment — still mark as paid
+      const t = await sequelize.transaction();
+      try {
+        trx.status = 'paid';
+        trx.paid_at = new Date();
+        if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
+        await trx.save({ transaction: t });
 
-    // Always respond 200 to Midtrans
-    res.status(200).json({ success: true, message: 'Notification processed.' });
+        const order = await Order.findByPk(trx.order_id, {
+          include: [{ model: OrderItem, as: 'items' }],
+          transaction: t,
+        });
+
+        if (order && (order.status === 'pending' || order.status === 'cancelled')) {
+          order.status = 'confirmed';
+          await order.save({ transaction: t });
+
+          if (order.items && order.items.length > 0) {
+            await deductStockForOrder(order.id, order.items, t);
+          }
+        }
+
+        await t.commit();
+
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('payment-success', { orderId: trx.order_id, ref_id: refId });
+          io.emit('order-status-update', { orderId: trx.order_id, status: 'confirmed' });
+          io.emit('stock-updated');
+        }
+
+        console.log(`[KuyzPay Webhook] Late payment processed for: ${refId}`);
+      } catch (dbError) {
+        await t.rollback();
+        throw dbError;
+      }
+    }
+
+    // Always respond 200 with status:true as recommended by KuyzPay docs
+    res.status(200).json({ status: true });
   } catch (error) {
-    console.error('[Midtrans Webhook Error]', error.message);
-    // Still respond 200 to prevent Midtrans from retrying
-    res.status(200).json({ success: true, message: 'Notification received.' });
+    console.error('[KuyzPay Webhook Error]', error.message);
+    // Still respond 200 to prevent retries
+    res.status(200).json({ status: true, message: 'Notification received.' });
   }
 };
 
 /**
  * GET /api/payments/:orderId/status
- * Get payment status — also checks Midtrans API as fallback
+ * Get payment status — also checks KuyzPay API as fallback
  */
 const getPaymentStatus = async (req, res, next) => {
   try {
@@ -240,64 +314,6 @@ const getPaymentStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan.' });
     }
 
-    // If still pending, check Midtrans for latest status
-    if (trx.status === 'pending' && trx.ref_id && !trx.ref_id.startsWith('KTK-MOCK') && !trx.ref_id.startsWith('CASH')) {
-      try {
-        const midtransStatus = await coreApi.transaction.status(trx.ref_id);
-        const transactionStatus = midtransStatus.transaction_status;
-
-        if (transactionStatus === 'settlement' || transactionStatus === 'capture') {
-          // Payment was successful but webhook hasn't arrived yet
-          const t = await sequelize.transaction();
-          try {
-            trx.status = 'paid';
-            trx.paid_at = new Date();
-            trx.trx_id = midtransStatus.transaction_id;
-            await trx.save({ transaction: t });
-
-            const order = await Order.findByPk(trx.order_id, {
-              include: [{ model: OrderItem, as: 'items' }],
-              transaction: t,
-            });
-
-            if (order && order.status === 'pending') {
-              order.status = 'confirmed';
-              await order.save({ transaction: t });
-
-              if (order.items && order.items.length > 0) {
-                await deductStockForOrder(order.id, order.items, t);
-              }
-            }
-
-            await t.commit();
-
-            // Emit socket events
-            const io = req.app.get('io');
-            if (io) {
-              io.emit('payment-success', { orderId: trx.order_id, ref_id: trx.ref_id });
-              io.emit('order-status-update', {
-                orderId: trx.order_id,
-                status: 'confirmed',
-              });
-              io.emit('stock-updated');
-            }
-          } catch (dbError) {
-            await t.rollback();
-            console.error('Error updating payment from polling:', dbError.message);
-          }
-        } else if (transactionStatus === 'expire') {
-          trx.status = 'expired';
-          await trx.save();
-        } else if (transactionStatus === 'cancel' || transactionStatus === 'deny') {
-          trx.status = 'failed';
-          await trx.save();
-        }
-      } catch (midtransError) {
-        // Midtrans check failed — just return local data
-        console.warn('Midtrans status check failed:', midtransError.message);
-      }
-    }
-
     res.json({
       success: true,
       data: {
@@ -307,6 +323,7 @@ const getPaymentStatus = async (req, res, next) => {
         paid_at: trx.paid_at,
         qr_url: trx.qris_content,
         qris_content: trx.qris_content,
+        pay_url: trx.pay_url || null,
       },
     });
   } catch (error) {
