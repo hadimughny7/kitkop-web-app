@@ -9,6 +9,7 @@ const path = require('path');
 const { testConnection } = require('./config/database');
 const errorHandler = require('./middleware/errorHandler');
 const setupSocket = require('./socket/orderSocket');
+const { capturePaymentWebhookBody } = require('./services/paymentWebhookSignature');
 
 // Import models (initializes associations)
 require('./models');
@@ -46,7 +47,7 @@ app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ verify: capturePaymentWebhookBody }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files
@@ -74,46 +75,6 @@ app.get('/api/health', (req, res) => {
 
 // Error handler
 app.use('/api/report', require('./routes/reportRoutes'));
-
-// TEMP DEBUG ROUTE
-app.get('/api/env-debug', (req, res) => {
-  res.json({
-    proxyDomain: process.env.RAILWAY_TCP_PROXY_DOMAIN,
-    proxyPort: process.env.RAILWAY_TCP_PROXY_PORT,
-    publicUrl: process.env.MYSQL_PUBLIC_URL
-  });
-});
-
-app.get('/api/run-import', async (req, res) => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const mysql = require('mysql2/promise');
-    
-    // Connect to internal Railway DB
-    const connection = await mysql.createConnection({
-      host: 'mysql.railway.internal',
-      user: 'root',
-      password: 'qkKEpBKRctgKGgPnUfGnchFXOxrDyjQs',
-      database: 'railway',
-      port: 3306,
-      multipleStatements: true
-    });
-    
-    const sqlPath = path.join(__dirname, 'local_backup.sql');
-    const sql = fs.readFileSync(sqlPath, 'utf8');
-    
-    await connection.query(sql);
-    await connection.end();
-    
-    res.json({ success: true, message: 'Database imported successfully!' });
-  } catch (err) {
-    res.json({ success: false, error: err.message, stack: err.stack });
-  }
-});
-
-
-
 
 app.use(errorHandler);
 

@@ -3,13 +3,14 @@ const assert = require('node:assert/strict');
 
 test('options APIs, immutable order snapshots, payments and stock refunds', { skip: process.env.KITKOP_OPTIONS_DB_TEST !== 'true' }, async () => {
   require('dotenv').config();
+  process.env.KUYZPAY_SECRET = 'integration-webhook-secret';
   const mysql = require('mysql2/promise');
   const database = `kitkop_options_test_${process.pid}`;
   const connection = await mysql.createConnection({ host: process.env.DB_HOST, port: process.env.DB_PORT || 3306, user: process.env.DB_USER, password: process.env.DB_PASSWORD });
   await connection.query(`CREATE DATABASE \`${database}\``);
   process.env.DB_NAME = database;
   const { sequelize } = require('../config/database');
-  const { User, MenuCategory, Menu, RawMaterial, MenuRecipe, OrderItem, Transaction, StockLog, OptionTemplate } = require('../models');
+  const { User, MenuCategory, Menu, RawMaterial, MenuRecipe, Order, OrderItem, Transaction, StockLog, OptionTemplate } = require('../models');
   let server;
   try {
     await sequelize.sync();
@@ -22,13 +23,18 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     const owner = await User.create({ name: 'Owner test', email: 'owner@example.test', username: 'owner', password_hash: 'test', role: 'owner' });
     const cashier = await User.create({ name: 'Cashier test', email: 'cashier@example.test', username: 'cashier', password_hash: 'test', role: 'kasir' });
     const kitchen = await User.create({ name: 'Kitchen test', email: 'kitchen@example.test', username: 'kitchen', password_hash: 'test', role: 'kitchen' });
+    const manager = await User.create({ name: 'Manager test', email: 'manager@example.test', username: 'manager', password_hash: 'test', role: 'manajer' });
+    const inactiveCashier = await User.create({ name: 'Inactive test', email: 'inactive@example.test', username: 'inactive', password_hash: 'test', role: 'kasir', is_active: 0 });
     const category = await MenuCategory.create({ name: 'Kopi' });
     const material = await RawMaterial.create({ name: 'Biji kopi', stock: 1000, unit: 'gram' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi susu', price: 20000 });
     await MenuRecipe.create({ menu_id: menu.id, raw_material_id: material.id, quantity_used: 18 });
     const plain = await Menu.create({ category_id: category.id, name: 'Air mineral', price: 5000 });
     const express = require('express');
-    const app = express(); app.use(express.json());
+    const { capturePaymentWebhookBody } = require('../services/paymentWebhookSignature');
+    const app = express(); app.use(express.json({ verify: capturePaymentWebhookBody }));
+    const emittedEvents = [];
+    app.set('io', { emit: (...args) => emittedEvents.push(args) });
     app.use('/api/option-groups', require('../routes/optionGroupRoutes'));
     app.use('/api/option-templates', require('../routes/optionTemplateRoutes'));
     app.use('/api/menus', require('../routes/menuRoutes'));
@@ -39,8 +45,8 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     server = app.listen(0, '127.0.0.1'); await new Promise((resolve) => server.once('listening', resolve));
     const base = `http://127.0.0.1:${server.address().port}/api`;
     const jwt = require('jsonwebtoken');
-    const call = async (path, method = 'GET', body, user = owner, expected = 200) => {
-      const headers = { 'Content-Type': 'application/json' };
+    const call = async (path, method = 'GET', body, user = owner, expected = 200, extraHeaders = {}) => {
+      const headers = { 'Content-Type': 'application/json', ...extraHeaders };
       if (user) headers.Authorization = `Bearer ${jwt.sign({ id: user.id }, process.env.JWT_SECRET || 'test')}`;
       const response = await fetch(base + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
       const data = await response.json();
@@ -62,6 +68,32 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     assert.equal('ingredients' in publicMenu.optionGroups[0].choices[0], false);
     assert.deepEqual((await call(`/menus/${plain.id}`)).optionGroups, []);
     const orderPayload = (id, options, qty = 2) => ({ customer_name: 'Test pelanggan', order_type: 'qr', items: [{ menu_id: id, qty, option_ids: options }] });
+    // F03: rejected cash requests must not change the order, transaction or stock.
+    const guarded = await call('/orders', 'POST', orderPayload(plain.id, []), null, 201);
+    const pendingPayment = await Transaction.create({ order_id: guarded.id, ref_id: 'F03-GUARDED', amount: guarded.total, payment_method: 'QRIS', status: 'pending' });
+    const stockBeforeAuthChecks = Number((await material.reload()).stock);
+    const logsBeforeAuthChecks = await StockLog.count();
+    await call(`/payments/${guarded.id}/cash`, 'POST', {}, null, 401);
+    await call(`/payments/${guarded.id}/cash`, 'POST', {}, kitchen, 403);
+    await call(`/payments/${guarded.id}/cash`, 'POST', {}, inactiveCashier, 401);
+    for (const token of ['invalid-token', jwt.sign({ id: cashier.id }, process.env.JWT_SECRET || 'test', { expiresIn: -1 })]) {
+      const response = await fetch(`${base}/payments/${guarded.id}/cash`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: '{}' });
+      assert.equal(response.status, 401);
+    }
+    assert.equal((await Order.findByPk(guarded.id)).status, 'pending');
+    assert.equal((await pendingPayment.reload()).status, 'pending');
+    assert.equal(pendingPayment.payment_method, 'QRIS');
+    assert.equal(Number((await material.reload()).stock), stockBeforeAuthChecks);
+    assert.equal(await StockLog.count(), logsBeforeAuthChecks);
+    // The normal POS workflow still creates an order, then pays it in one action.
+    for (const staff of [cashier, manager, owner]) {
+      const posOrder = await call('/orders', 'POST', { ...orderPayload(plain.id, []), order_type: 'kasir' }, staff, 201);
+      await call(`/payments/${posOrder.id}/cash`, 'POST', {}, staff);
+      assert.equal((await Order.findByPk(posOrder.id)).status, 'confirmed');
+      const paid = await Transaction.findOne({ where: { order_id: posOrder.id } });
+      assert.equal(paid.status, 'paid');
+      assert.equal(paid.payment_method, 'CASH');
+    }
     await call('/orders', 'POST', orderPayload(menu.id, []), null, 400);
     await call('/orders', 'POST', orderPayload(menu.id, ['ice', 'ice']), null, 400);
     await call('/orders', 'POST', orderPayload(menu.id, ['foreign']), null, 400);
@@ -95,8 +127,28 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     const qr = await call('/orders', 'POST', orderPayload(menu.id, ['hot']), null, 201);
     await Transaction.create({ order_id: qr.id, ref_id: 'QR-TEST', amount: qr.total, payment_method: 'QRIS', status: 'pending' });
     // Exercise the actual callback handler locally; no payment gateway request is made.
-    await call('/payments/callback', 'POST', { ref_id: 'QR-TEST', event: 'payment.success', status: 'Success' }, null);
-    await call('/payments/callback', 'POST', { ref_id: 'QR-TEST', event: 'payment.success', status: 'Success' }, null);
+    const signWebhook = (body) => require('node:crypto').createHmac('sha256', process.env.KUYZPAY_SECRET).update(body).digest('hex');
+    const webhookBody = { ref_id: 'QR-TEST', event: 'payment.success', status: 'Success' };
+    const webhookJson = JSON.stringify(webhookBody);
+    const eventsBeforeBadWebhooks = emittedEvents.length;
+    const logsBeforeBadWebhooks = await StockLog.count();
+    for (const signature of [undefined, '', 'broken', 'a'.repeat(63), 'z'.repeat(64), '0'.repeat(64)]) {
+      await call('/payments/callback', 'POST', webhookBody, null, 401, signature === undefined ? {} : { 'x-kuyzpay-signature': signature });
+    }
+    // A body MD5 signature is not a substitute for a valid HMAC header.
+    await call('/payments/callback', 'POST', { ...webhookBody, signature: require('node:crypto').createHash('md5').update(`${process.env.KUYZPAY_MERCHANT_ID}:${process.env.KUYZPAY_SECRET}:QR-TEST`).digest('hex') }, null, 401);
+    await call('/payments/callback', 'POST', { ...webhookBody, status: 'Expired' }, null, 401, { 'x-kuyzpay-signature': signWebhook(webhookJson) });
+    await call('/payments/callback', 'POST', webhookBody, null, 400, { 'x-kuyzpay-signature': signWebhook(webhookJson), 'x-kuyzpay-event': 'payment.expired' });
+    assert.equal((await Transaction.findOne({ where: { order_id: qr.id } })).status, 'pending');
+    assert.equal((await Order.findByPk(qr.id)).status, 'pending');
+    assert.equal(Number((await material.reload()).stock), 1000);
+    assert.equal(await StockLog.count(), logsBeforeBadWebhooks);
+    assert.equal(emittedEvents.length, eventsBeforeBadWebhooks);
+    const rawWebhook = '{\n  "status": "Success",\n  "event": "payment.success",\n  "ref_id": "QR-TEST",\n  "customer_name": "Pelanggan café"\n}\n';
+    const validResponse = await fetch(`${base}/payments/callback`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-kuyzpay-signature': signWebhook(rawWebhook), 'x-kuyzpay-event': 'payment.success' }, body: rawWebhook });
+    assert.equal(validResponse.status, 200);
+    assert.equal((await validResponse.json()).status, true);
+    await call('/payments/callback', 'POST', webhookBody, null, 200, { 'x-kuyzpay-signature': signWebhook(webhookJson) });
     assert.equal(Number((await material.reload()).stock), 964);
     await call(`/payments/${qr.id}/simulate-pay`, 'POST', {}, null);
     await call(`/payments/${qr.id}/simulate-pay`, 'POST', {}, null);

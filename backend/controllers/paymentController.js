@@ -1,8 +1,8 @@
 const axios = require('axios');
-const crypto = require('crypto');
 const { Transaction, Order, OrderItem } = require('../models');
 const { deductStockForOrder } = require('./stockController');
 const { sequelize } = require('../config/database');
+const { validPaymentWebhookSignature } = require('../services/paymentWebhookSignature');
 
 // KuyzPay configuration
 const KUYZPAY_MERCHANT_ID = process.env.KUYZPAY_MERCHANT_ID;
@@ -159,36 +159,21 @@ const createQrisPayment = async (req, res, next) => {
  */
 const paymentCallback = async (req, res, next) => {
   try {
-    const rawBody = JSON.stringify(req.body);
-    const signature = req.headers['x-kuyzpay-signature'];
-    const event = req.headers['x-kuyzpay-event'] || req.body.event;
-
-    console.log(`[KuyzPay Webhook] Event: ${event}, Signature present: ${!!signature}`);
-
-    // Verify HMAC-SHA256 signature if present
-    if (signature && KUYZPAY_SECRET) {
-      const expected = crypto.createHmac('sha256', KUYZPAY_SECRET).update(rawBody).digest('hex');
-      try {
-        const isValid = crypto.timingSafeEqual(
-          Buffer.from(signature, 'hex'),
-          Buffer.from(expected, 'hex')
-        );
-        if (!isValid) {
-          console.warn('[KuyzPay Webhook] Invalid signature');
-          return res.status(200).json({ status: true, message: 'Invalid signature, ignored.' });
-        }
-      } catch (e) {
-        // Also verify legacy MD5 signature from body
-        const md5Sig = req.body.signature;
-        if (md5Sig) {
-          const md5Expected = crypto.createHash('md5')
-            .update(`${KUYZPAY_MERCHANT_ID}:${KUYZPAY_SECRET}:${req.body.reff_id || req.body.ref_id}`)
-            .digest('hex');
-          if (md5Sig !== md5Expected) {
-            console.warn('[KuyzPay Webhook] Invalid MD5 signature');
-          }
-        }
-      }
+    if (!KUYZPAY_SECRET || !KUYZPAY_SECRET.trim()) {
+      console.error('[KuyzPay Webhook] Webhook secret is not configured');
+      return res.status(503).json({ status: false, message: 'Verifikasi pembayaran belum dikonfigurasi.' });
+    }
+    if (!Buffer.isBuffer(req.rawBody)) {
+      return res.status(400).json({ status: false, message: 'Webhook harus berupa JSON dengan raw body yang tersedia.' });
+    }
+    if (!validPaymentWebhookSignature(req.rawBody, req.headers['x-kuyzpay-signature'], KUYZPAY_SECRET)) {
+      return res.status(401).json({ status: false, message: 'Signature webhook tidak valid.' });
+    }
+    // Only signed body fields may determine payment actions. Headers are not signed.
+    const event = req.body.event;
+    const headerEvent = req.headers['x-kuyzpay-event'];
+    if (headerEvent && headerEvent !== event) {
+      return res.status(400).json({ status: false, message: 'Event webhook tidak sesuai dengan payload.' });
     }
 
     const webhookData = req.body;
@@ -293,12 +278,11 @@ const paymentCallback = async (req, res, next) => {
       }
     }
 
-    // Always respond 200 with status:true as recommended by KuyzPay docs
+    // Acknowledge only after successful validation and processing.
     res.status(200).json({ status: true });
   } catch (error) {
     console.error('[KuyzPay Webhook Error]', error.message);
-    // Still respond 200 to prevent retries
-    res.status(200).json({ status: true, message: 'Notification received.' });
+    res.status(500).json({ status: false, message: 'Gagal memproses notifikasi pembayaran.' });
   }
 };
 

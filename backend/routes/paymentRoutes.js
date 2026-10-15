@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { createQrisPayment, paymentCallback, getPaymentStatus, simulatePayment, payCash } = require('../controllers/paymentController');
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, authorizeRoles } = require('../middleware/auth');
 
 // Public (customer payment)
 router.post('/create-qris', createQrisPayment);
@@ -12,6 +12,6 @@ router.get('/:orderId/status', getPaymentStatus);
 router.post('/:orderId/simulate-pay', simulatePayment);
 
 // Kasir manual payment
-router.post('/:orderId/cash', payCash);
+router.post('/:orderId/cash', verifyToken, authorizeRoles('kasir', 'manajer', 'owner'), payCash);
 
 module.exports = router;
