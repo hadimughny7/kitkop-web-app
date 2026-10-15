@@ -45,14 +45,18 @@ test('completed order count excludes cancelled and still-processing orders', () 
   const result = summarize({ todayOrders: [
     order(4, { status: 'completed' }), order(5, { status: 'preparing' }),
     order(6, { status: 'cancelled' }),
+    order(7, { status: 'completed', updated_at: '2026-10-15T05:00:00Z' }),
+    order(8, { status: 'completed', transaction: { status: 'pending' } }),
   ] });
-  assert.equal(result.completedOrderCount, 1);
+  assert.equal(result.completedOrderCount, 2);
+  assert.deepEqual(result.completedOrders.map((o) => o.id), [7, 4]);
 });
 
 test('empty operational data produces zero totals and empty queues', () => {
   const result = summarize();
   assert.equal(result.paidTotal, 0);
   assert.deepEqual(result.queue, []);
+  assert.deepEqual(result.completedOrders, []);
 });
 
 test('daily query follows WIB midnight rather than the computer timezone', () => {

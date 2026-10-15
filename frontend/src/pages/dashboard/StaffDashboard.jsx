@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { HiOutlineArrowRight, HiOutlineCash, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh, HiOutlineShoppingCart } from 'react-icons/hi';
+import { HiOutlineArrowRight, HiOutlineCash, HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh, HiOutlineShoppingCart } from 'react-icons/hi';
 import useStaffDashboard from './useStaffDashboard';
 import './StaffDashboard.css';
 
@@ -9,8 +9,8 @@ const currency = (value) => new Intl.NumberFormat('id-ID', {
 const time = (value) => new Intl.DateTimeFormat('id-ID', {
   hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta',
 }).format(new Date(value));
-const statusLabels = { confirmed: 'Antrean masuk', preparing: 'Diproses' };
-const statusBadges = { confirmed: 'badge-neutral', preparing: 'badge-info' };
+const statusLabels = { confirmed: 'Antrean masuk', preparing: 'Diproses', completed: 'Selesai' };
+const statusBadges = { confirmed: 'badge-neutral', preparing: 'badge-info', completed: 'badge-success' };
 
 function Metric({ label, value, icon }) {
   return (
@@ -85,7 +85,7 @@ export default function StaffDashboard({ role }) {
             </div>
           </div>
 
-          <div className="staff-metrics">
+          <div className={`staff-metrics${isCashier ? '' : ' staff-metrics-production'}`}>
             {isCashier ? (
               <>
                 <Metric label="Pesanan hari ini" value={summary.todayCount} icon={<HiOutlineClipboardList />} />
@@ -95,6 +95,7 @@ export default function StaffDashboard({ role }) {
               <>
                 <Metric label="Pesanan antrean masuk" value={summary.incomingCount} icon={<HiOutlineClipboardList />} />
                 <Metric label="Pesanan sedang diproses" value={summary.preparingCount} icon={<HiOutlineClock />} />
+                <Metric label="Pesanan selesai dari pesanan hari ini" value={summary.completedOrderCount} icon={<HiOutlineCheckCircle />} />
               </>
             )}
           </div>
@@ -127,11 +128,14 @@ export default function StaffDashboard({ role }) {
                 </section>
               ) : (
                 <>
-                  <section className="card" aria-label="Produksi pesanan hari ini">
-                    <div className="card-header"><div><h2>Produksi pesanan hari ini</h2><p>Hasil dari pesanan yang dibuat hari ini.</p></div></div>
-                    <dl className="staff-payment-breakdown">
-                      <div><dt>Pesanan selesai</dt><dd>{summary.completedOrderCount}</dd></div>
-                    </dl>
+                  <section className="card" aria-label="Pesanan selesai">
+                    <div className="card-header">
+                      <div><h2>Pesanan selesai</h2><p>Pesanan yang dibuat hari ini dan sudah selesai.</p></div>
+                      <span className="badge badge-neutral">{summary.completedOrderCount} pesanan</span>
+                    </div>
+                    <div className="staff-completed-orders" tabIndex={0} role="region" aria-label="Daftar pesanan selesai">
+                      <OrderList orders={summary.completedOrders} limit={summary.completedOrders.length} emptyText="Belum ada pesanan yang selesai dari pesanan hari ini." />
+                    </div>
                   </section>
                 </>
               )}

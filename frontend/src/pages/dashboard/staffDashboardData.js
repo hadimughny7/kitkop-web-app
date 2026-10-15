@@ -24,7 +24,8 @@ export const buildStaffSummary = ({ todayOrders, activeOrders }) => {
   const cashOrders = paidToday.filter((order) => order.transaction.payment_method?.toUpperCase() === 'CASH');
   const qrisOrders = paidToday.filter((order) => order.transaction.payment_method?.toUpperCase() === 'QRIS');
   const otherOrders = paidToday.filter((order) => !['CASH', 'QRIS'].includes(order.transaction.payment_method?.toUpperCase()));
-
+  const completedOrders = paidToday.filter((order) => order.status === 'completed')
+    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at));
 
   return {
     todayCount: todayOrders.length,
@@ -36,7 +37,8 @@ export const buildStaffSummary = ({ todayOrders, activeOrders }) => {
     queue,
     incomingCount: queue.filter((order) => order.status === 'confirmed').length,
     preparingCount: queue.filter((order) => order.status === 'preparing').length,
-    completedOrderCount: paidToday.filter((order) => order.status === 'completed').length,
+    completedOrders,
+    completedOrderCount: completedOrders.length,
 
   };
 };
