@@ -2,21 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { orderAPI, BACKEND_URL } from '../../services/api';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
-import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlineRefresh, HiCheck, HiVolumeOff, HiOutlineInbox } from 'react-icons/hi';
-import { startNotificationAlert, stopNotificationAlert, isAlertRinging, initAudioContext } from '../../utils/notificationSound';
+import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlineRefresh, HiCheck, HiOutlineInbox } from 'react-icons/hi';
 import './StationDashboard.css';
 
 const KitchenDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [activeTab, setActiveTab] = useState('confirmed');
   const [loading, setLoading] = useState(true);
-
-  // Initialize audio context on first user interaction
-  useEffect(() => {
-    const handleClick = () => initAudioContext();
-    document.addEventListener('click', handleClick, { once: true });
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
 
   useEffect(() => {
     loadOrders();
@@ -27,28 +19,15 @@ const KitchenDashboard = () => {
       loadOrders();
     });
 
-    socket.on('payment-success', () => {
-      loadOrders();
-      startNotificationAlert(3000);
-      toast('💰 Pembayaran diterima, pesanan siap diproses!', { icon: '🔔' });
-    });
+    socket.on('payment-success', () => loadOrders());
 
     socket.on('order-status-update', () => loadOrders());
     socket.on('order-item-update', () => loadOrders());
 
     return () => {
       socket.disconnect();
-      stopNotificationAlert();
     };
   }, []);
-
-  // Auto-stop alert when no confirmed orders remain
-  useEffect(() => {
-    const confirmedCount = orders.filter(o => o.status === 'confirmed').length;
-    if (confirmedCount === 0 && isAlertRinging()) {
-      stopNotificationAlert();
-    }
-  }, [orders]);
 
   const loadOrders = async () => {
     try {
@@ -146,11 +125,6 @@ const KitchenDashboard = () => {
           <p className="page-subtitle">Kelola pesanan makanan & snack</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-          {isAlertRinging() && (
-            <button className="btn btn-danger btn-sm alert-dismiss-btn" onClick={() => { stopNotificationAlert(); loadOrders(); }}>
-              <HiVolumeOff /> Matikan Notifikasi
-            </button>
-          )}
           <button className="btn btn-secondary" onClick={loadOrders}>
             <HiOutlineRefresh /> Refresh
           </button>

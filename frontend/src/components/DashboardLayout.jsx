@@ -17,6 +17,7 @@ import {
   HiOutlineCog,
 } from 'react-icons/hi';
 import { useState } from 'react';
+import StaffOrderNotifications from './StaffOrderNotifications';
 import './DashboardLayout.css';
 
 const DashboardLayout = () => {
@@ -188,6 +189,7 @@ const DashboardLayout = () => {
             </p>
           </div>
         </header>
+        <StaffOrderNotifications key={user?.id} />
         <div id="dashboard-content" className="dashboard-content" tabIndex={-1}>
           <Outlet />
         </div>

@@ -1,0 +1,33 @@
+.staff-order-notification {
+  position: sticky;
+  top: 80px;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 32px;
+  background: var(--surface-primary);
+  border-bottom: 1px solid var(--neutral-300);
+}
+
+.staff-order-notification-message {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--neutral-700);
+}
+
+.staff-order-notification-message > svg { flex-shrink: 0; font-size: 22px; }
+.staff-order-notification-message strong { color: var(--neutral-900); }
+.staff-order-notification > button { flex-shrink: 0; }
+
+@media (max-width: 1024px) {
+  .staff-order-notification { top: 72px; padding-inline: 24px; }
+}
+
+@media (max-width: 640px) {
+  .staff-order-notification { flex-wrap: wrap; padding: 12px 16px; gap: 10px; }
+  .staff-order-notification > button { margin-left: 34px; }
+}

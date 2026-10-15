@@ -12,7 +12,6 @@ import {
   HiOutlineEye,
 } from 'react-icons/hi';
 import { io } from 'socket.io-client';
-import { playNotificationSound, initAudioContext } from '../../utils/notificationSound';
 import './OrderDashboard.css';
 
 const OrderDashboard = () => {
@@ -60,13 +59,6 @@ const OrderDashboard = () => {
     loadOrders();
   }, [search, statusFilter, typeFilter, dateFilter]);
 
-  // Initialize audio context on first user interaction
-  useEffect(() => {
-    const handleClick = () => initAudioContext();
-    document.addEventListener('click', handleClick, { once: true });
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-
   useEffect(() => {
     const socket = io(BACKEND_URL);
     socket.emit('join-role', 'admin');
@@ -76,7 +68,6 @@ const OrderDashboard = () => {
     });
     socket.on('order-status-update', () => setTimeout(() => loadOrders(), 300));
     socket.on('payment-success', () => {
-      playNotificationSound();
       setTimeout(() => loadOrders(), 300);
     });
 

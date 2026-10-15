@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { initAudioContext } from '../../utils/notificationSound';
 import toast from 'react-hot-toast';
 import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineArrowRight } from 'react-icons/hi';
 import './LoginPage.css';
@@ -20,6 +21,8 @@ const LoginPage = () => {
       return;
     }
 
+    // Unlock notification audio during the login gesture, before the async request.
+    initAudioContext();
     setLoading(true);
     try {
       const user = await doLogin({ login, password });
