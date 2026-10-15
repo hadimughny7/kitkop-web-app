@@ -917,3 +917,27 @@
   .menu-card-add { min-height: 44px; }
   .menu-card-img-placeholder { font-size: 9px; }
 }
+
+/* Cart summary stays reachable while browsing; leave space for the last menu row. */
+.menu-browse-page.has-cart-summary .customer-container { padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
+.menu-browse-page.has-cart-summary .menu-grid { padding-bottom: 24px; }
+.menu-browse-page.has-cart-summary :is(button, input) { scroll-margin-bottom: 160px; }
+.menu-cart-summary { position: fixed; inset: auto 0 0; z-index: 30; padding: 16px 24px calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--surface-primary); border-top: 1px solid var(--neutral-200); box-shadow: 0 -4px 20px rgb(0 0 0 / 4%); }
+.menu-cart-summary-inner { max-width: 952px; margin-inline: auto; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.menu-cart-summary-info { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.menu-cart-summary-info > span { font-size: 12px; color: var(--neutral-500); }
+.menu-cart-summary-info > strong { font-family: var(--font-display); font-size: 24px; line-height: 1.2; font-weight: 600; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.menu-cart-summary-button { min-height: 48px; gap: 24px; flex-shrink: 0; }
+.menu-cart-summary-button svg { font-size: 18px; }
+.cart-summary-announcement { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 640px) {
+  .menu-cart-summary { padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px)); }
+  .menu-cart-summary-inner { gap: 12px; }
+  .menu-cart-summary-info > span { font-size: 11px; }
+  .menu-cart-summary-info > strong { font-size: 21px; }
+  .menu-cart-summary-button { padding-inline: 18px; gap: 12px; font-size: 12px; }
+}
+@media (max-width: 360px) {
+  .menu-cart-summary-info > strong { font-size: 18px; }
+  .menu-cart-summary-button { padding-inline: 14px; gap: 8px; }
+}

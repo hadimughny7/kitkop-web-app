@@ -146,7 +146,6 @@ const StockManagement = () => {
           <h1 className="page-title">Manajemen Stok Bahan Baku</h1>
           <p className="page-subtitle">Pantau bahan baku, resep menu, dan pengurangan stok otomatis dari setiap pesanan.</p>
         </div>
-        <button className="btn btn-secondary">Tutup Kasir</button>
       </div>
 
       {/* Top Stat Cards */}

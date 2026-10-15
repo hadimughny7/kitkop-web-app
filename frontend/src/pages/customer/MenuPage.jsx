@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
 import { useCart } from '../../context/CartContext';
-import { HiOutlineShoppingCart, HiOutlineSearch, HiPlus, HiMinus } from 'react-icons/hi';
+import { HiOutlineSearch, HiOutlineArrowRight, HiPlus, HiMinus } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import './CustomerPages.css';
 
@@ -15,7 +15,7 @@ const MenuPage = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { addItem, removeItem, updateQty, itemCount, items } = useCart();
+  const { addItem, removeItem, updateQty, itemCount, items, subtotal } = useCart();
 
   useEffect(() => {
     loadData();
@@ -79,15 +79,11 @@ const MenuPage = () => {
   }
 
   return (
-    <div className="customer-page menu-browse-page">
+    <div className={`customer-page menu-browse-page${itemCount > 0 ? ' has-cart-summary' : ''}`}>
       <div className="customer-container">
         <div className="menu-page-header">
           <div className="menu-page-top">
             <div><p className="menu-brand-label">KITKOP.ID · MEJA {tableNum}</p><h1>Teman ngopi{' '}<br /><span>hari ini.</span></h1></div>
-            <button className="cart-fab" aria-label={`Lihat keranjang, ${itemCount} item`} onClick={() => navigate(`/order/cart?table=${tableNum}`)}>
-              <HiOutlineShoppingCart />
-              {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
-            </button>
           </div>
 
           <p className="menu-page-intro">Pilih favoritmu. Kami siapkan dari sini.</p>
@@ -189,6 +185,28 @@ const MenuPage = () => {
           </div>
         )}
       </div>
+
+      <div className="cart-summary-announcement" role="status" aria-atomic="true">
+        {itemCount > 0 ? `${itemCount} item di keranjang. Subtotal ${formatCurrency(subtotal)}.` : 'Keranjang kosong.'}
+      </div>
+
+      {itemCount > 0 && (
+        <section className="menu-cart-summary" aria-label="Ringkasan keranjang">
+          <div className="menu-cart-summary-inner">
+            <div className="menu-cart-summary-info">
+              <span>{itemCount} item · Subtotal</span>
+              <strong>{formatCurrency(subtotal)}</strong>
+            </div>
+            <button
+              type="button"
+              className="btn btn-primary menu-cart-summary-button"
+              onClick={() => navigate(`/order/cart?table=${tableNum}`)}
+            >
+              Lihat Keranjang <HiOutlineArrowRight aria-hidden="true" />
+            </button>
+          </div>
+        </section>
+      )}
     </div>
   );
 };
