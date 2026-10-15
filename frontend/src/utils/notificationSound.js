@@ -16,56 +16,46 @@ const getAudioContext = () => {
 };
 
 /**
- * Play a single "ding-dong-ding" notification chime.
+ * Original soft bell motif: C6, E6, G6.
+ * Gentle attacks and fading harmonics keep repeated alerts clear without clicks.
  */
 const playChime = () => {
   try {
     const ctx = getAudioContext();
-
     if (ctx.state === 'suspended') {
-      ctx.resume();
+      ctx.resume().catch(() => {});
     }
 
-    const now = ctx.currentTime;
+    const now = ctx.currentTime + 0.02;
+    const notes = [
+      { frequency: 1046.50, offset: 0, volume: 0.19 },
+      { frequency: 1318.51, offset: 0.19, volume: 0.16 },
+      { frequency: 1567.98, offset: 0.38, volume: 0.14 },
+    ];
 
-    // === First tone (higher pitch "ding") ===
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(830, now);
-    gain1.gain.setValueAtTime(0.35, now);
-    gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.4);
-
-    // === Second tone (lower pitch "dong") ===
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(660, now + 0.15);
-    gain2.gain.setValueAtTime(0, now);
-    gain2.gain.setValueAtTime(0.3, now + 0.15);
-    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.start(now + 0.15);
-    osc2.stop(now + 0.6);
-
-    // === Third tone (resolution) ===
-    const osc3 = ctx.createOscillator();
-    const gain3 = ctx.createGain();
-    osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(990, now + 0.3);
-    gain3.gain.setValueAtTime(0, now);
-    gain3.gain.setValueAtTime(0.25, now + 0.3);
-    gain3.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-    osc3.connect(gain3);
-    gain3.connect(ctx.destination);
-    osc3.start(now + 0.3);
-    osc3.stop(now + 0.8);
-
+    notes.forEach(({ frequency, offset, volume }) => {
+      // A quiet overtone gives the sine bell a little sparkle, without harshness.
+      [1, 2].forEach((harmonic) => {
+        const start = now + offset;
+        const duration = harmonic === 1 ? 0.95 : 0.36;
+        const oscillator = ctx.createOscillator();
+        const envelope = ctx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency * harmonic, start);
+        envelope.gain.setValueAtTime(0, start);
+        envelope.gain.linearRampToValueAtTime(volume * (harmonic === 1 ? 1 : 0.12), start + 0.012);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration - 0.03);
+        envelope.gain.linearRampToValueAtTime(0, start + duration);
+        oscillator.connect(envelope);
+        envelope.connect(ctx.destination);
+        oscillator.onended = () => {
+          oscillator.disconnect();
+          envelope.disconnect();
+        };
+        oscillator.start(start);
+        oscillator.stop(start + duration);
+      });
+    });
   } catch (err) {
     console.warn('Notification sound failed:', err);
   }
@@ -73,11 +63,11 @@ const playChime = () => {
 
 /**
  * Play a notification sound that loops 3 times.
- * Each chime is ~0.8s long, with a gap between repeats.
+ * Each chime is ~1.35s long, with a gap between repeats.
  * @param {number} repeatCount - Number of times to play (default: 3)
- * @param {number} delayMs - Delay between each chime in ms (default: 1000)
+ * @param {number} delayMs - Delay between each chime in ms (default: 1800)
  */
-export const playNotificationSound = (repeatCount = 3, delayMs = 1000) => {
+export const playNotificationSound = (repeatCount = 3, delayMs = 1800) => {
   let played = 0;
 
   const playNext = () => {
