@@ -1,5 +1,28 @@
-const { Menu, MenuCategory, MenuRecipe, RawMaterial, OrderItem } = require('../models');
+const { Menu, MenuCategory, MenuRecipe, RawMaterial, OrderItem, OptionGroup } = require('../models');
 const { Op } = require('sequelize');
+const { sequelize } = require('../config/database');
+const { fail } = require('../services/menuOptions');
+const { parseMenuOptions, saveMenuOptions } = require('../services/saveMenuOptions');
+const optionInclude = { model: OptionGroup, as: 'optionGroups', attributes: ['id', 'name', 'min_choices', 'max_choices', 'is_active', 'choices'], through: { attributes: ['sort_order'] } };
+// Public menu responses omit internal ingredient recipes.
+const publicMenu = (menu) => {
+  const data = menu.toJSON();
+  data.optionGroups = (data.optionGroups || []).sort((a,b) => a.MenuOptionGroup.sort_order - b.MenuOptionGroup.sort_order).map((g) => ({ ...g, choices: g.choices.map(({ ingredients, ...choice }) => choice) }));
+  return data;
+};
+const parseGroups = async (value) => {
+  if (value === undefined) return undefined;
+  let ids;
+  try { ids = typeof value === 'string' ? JSON.parse(value) : value; } catch { fail('Daftar kelompok tidak valid.'); }
+  if (!Array.isArray(ids) || ids.length > 20 || ids.some((id) => !Number.isInteger(Number(id)) || Number(id) < 1) || new Set(ids.map(Number)).size !== ids.length) fail('Daftar kelompok tidak valid.');
+  if (await OptionGroup.count({ where: { id: ids } }) !== ids.length) fail('Kelompok tidak ditemukan.');
+  return ids.map(Number);
+};
+const attachGroups = async (menu, ids, transaction) => {
+  if (ids === undefined) return;
+  await menu.setOptionGroups([], { transaction });
+  for (const [index, id] of ids.entries()) await menu.addOptionGroup(id, { through: { sort_order: index }, transaction });
+};
 const path = require('path');
 const fs = require('fs');
 
@@ -25,11 +48,12 @@ const getMenus = async (req, res, next) => {
       where,
       include: [
         { model: MenuCategory, as: 'category', attributes: ['id', 'name'] },
+        optionInclude,
       ],
       order: [['category_id', 'ASC'], ['name', 'ASC']],
     });
 
-    res.json({ success: true, data: menus });
+    res.json({ success: true, data: menus.map(publicMenu) });
   } catch (error) {
     next(error);
   }
@@ -44,6 +68,7 @@ const getMenuById = async (req, res, next) => {
     const menu = await Menu.findByPk(req.params.id, {
       include: [
         { model: MenuCategory, as: 'category', attributes: ['id', 'name'] },
+        optionInclude,
         {
           model: MenuRecipe,
           as: 'recipes',
@@ -58,7 +83,7 @@ const getMenuById = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Menu tidak ditemukan.' });
     }
 
-    res.json({ success: true, data: menu });
+    res.json({ success: true, data: publicMenu(menu) });
   } catch (error) {
     next(error);
   }
@@ -79,24 +104,32 @@ const createMenu = async (req, res, next) => {
       });
     }
 
+    const options = parseMenuOptions(req.body.option_groups);
+    if (options !== undefined && req.body.option_group_ids !== undefined) fail('Gunakan satu format pilihan menu.');
+    const groupIds = await parseGroups(req.body.option_group_ids);
     const image = req.file ? `/uploads/menus/${req.file.filename}` : null;
 
-    const menu = await Menu.create({
+    const menu = await sequelize.transaction(async (transaction) => {
+      const created = await Menu.create({
       category_id,
       name,
       description,
       price,
       image,
+      }, { transaction });
+      await attachGroups(created, groupIds, transaction);
+      await saveMenuOptions(created, options, transaction);
+      return created;
     });
 
     const menuWithCategory = await Menu.findByPk(menu.id, {
-      include: [{ model: MenuCategory, as: 'category', attributes: ['id', 'name'] }],
+      include: [{ model: MenuCategory, as: 'category', attributes: ['id', 'name'] }, optionInclude],
     });
 
     res.status(201).json({
       success: true,
       message: 'Menu berhasil ditambahkan.',
-      data: menuWithCategory,
+      data: publicMenu(menuWithCategory),
     });
   } catch (error) {
     next(error);
@@ -115,6 +148,9 @@ const updateMenu = async (req, res, next) => {
     }
 
     const { category_id, name, description, price } = req.body;
+    const options = parseMenuOptions(req.body.option_groups);
+    if (options !== undefined && req.body.option_group_ids !== undefined) fail('Gunakan satu format pilihan menu.');
+    const groupIds = await parseGroups(req.body.option_group_ids);
 
     if (category_id) menu.category_id = category_id;
     if (name) menu.name = name;
@@ -131,16 +167,21 @@ const updateMenu = async (req, res, next) => {
       menu.image = `/uploads/menus/${req.file.filename}`;
     }
 
-    await menu.save();
+    await sequelize.transaction(async (transaction) => {
+      await Menu.findByPk(menu.id, { transaction, lock: transaction.LOCK.UPDATE });
+      await menu.save({ transaction });
+      await attachGroups(menu, groupIds, transaction);
+      await saveMenuOptions(menu, options, transaction);
+    });
 
     const updatedMenu = await Menu.findByPk(menu.id, {
-      include: [{ model: MenuCategory, as: 'category', attributes: ['id', 'name'] }],
+      include: [{ model: MenuCategory, as: 'category', attributes: ['id', 'name'] }, optionInclude],
     });
 
     res.json({
       success: true,
       message: 'Menu berhasil diperbarui.',
-      data: updatedMenu,
+      data: publicMenu(updatedMenu),
     });
   } catch (error) {
     next(error);
@@ -207,4 +248,32 @@ const toggleAvailability = async (req, res, next) => {
   }
 };
 
-module.exports = { getMenus, getMenuById, createMenu, updateMenu, deleteMenu, toggleAvailability };
+const getMenuOptions = async (req, res, next) => {
+  try {
+    const menu = await Menu.findByPk(req.params.id);
+    if (!menu) fail('Menu tidak ditemukan.', 404);
+    const groups = await menu.getOptionGroups();
+    groups.sort((a, b) => a.MenuOptionGroup.sort_order - b.MenuOptionGroup.sort_order);
+    res.json({ success: true, data: groups });
+  } catch (error) { next(error); }
+};
+
+const setMenuOptionAvailability = async (req, res, next) => {
+  try {
+    if (typeof req.body.is_available !== 'boolean') fail('Status ketersediaan tidak valid.');
+    await sequelize.transaction(async (transaction) => {
+      const menu = await Menu.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!menu) fail('Menu tidak ditemukan.', 404);
+      const groups = await menu.getOptionGroups({ transaction });
+      groups.sort((a, b) => a.MenuOptionGroup.sort_order - b.MenuOptionGroup.sort_order);
+      const target = groups.find((g) => String(g.id) === req.params.groupId);
+      if (!target || !target.choices.some((c) => c.id === req.params.choiceId)) fail('Pilihan menu tidak ditemukan.', 404);
+      const definitions = groups.map((g) => ({ ...g.toJSON(), choices: g.choices.map((c) => g.id === target.id && c.id === req.params.choiceId ? { ...c, is_available: req.body.is_available, is_default: req.body.is_available && c.is_default } : c) }));
+      await saveMenuOptions(menu, parseMenuOptions(definitions), transaction, false);
+    });
+    req.app.get('io')?.emit('menu-updated');
+    res.json({ success: true, message: 'Ketersediaan pilihan diperbarui.' });
+  } catch (error) { next(error); }
+};
+
+module.exports = { getMenuOptions, setMenuOptionAvailability, getMenus, getMenuById, createMenu, updateMenu, deleteMenu, toggleAvailability };

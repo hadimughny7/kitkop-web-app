@@ -1,3 +1,5 @@
+import { optionText } from '../../utils/menuOptions';
+import '../../components/MenuOptions.css';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
@@ -367,6 +369,7 @@ const OrderStatusPage = () => {
                     <span className="customer-item-icon">{getItemIcon(item)}</span>
                     <div className="customer-item-info">
                       <span className="customer-item-name">{item.menu?.name} × {item.qty}</span>
+                      <span className="selected-options">{optionText(item)}</span>
                       {item.notes && <span className="customer-item-notes">{item.notes}</span>}
                     </div>
                     <span className="customer-item-price">{formatCurrency(item.price * item.qty)}</span>

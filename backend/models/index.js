@@ -11,6 +11,11 @@ const OrderStatusLog = require('./OrderStatusLog');
 const Transaction = require('./Transaction');
 const StockLog = require('./StockLog');
 const Setting = require('./Setting');
+const OptionGroup = require('./OptionGroup');
+const OptionTemplate = require('./OptionTemplate');
+const MenuOptionGroup = require('./MenuOptionGroup');
+Menu.belongsToMany(OptionGroup, { through: MenuOptionGroup, foreignKey: 'menu_id', otherKey: 'option_group_id', as: 'optionGroups' });
+OptionGroup.belongsToMany(Menu, { through: MenuOptionGroup, foreignKey: 'option_group_id', otherKey: 'menu_id', as: 'menus' });
 
 // ============================================
 // ASSOCIATIONS
@@ -81,4 +86,7 @@ module.exports = {
   Transaction,
   StockLog,
   Setting,
+  OptionGroup,
+  OptionTemplate,
+  MenuOptionGroup,
 };

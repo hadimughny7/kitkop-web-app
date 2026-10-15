@@ -1,10 +1,20 @@
-import { useState, useEffect } from 'react';
-import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
+import MenuOptionsEditor from './MenuOptionsEditor';
+import { useState, useEffect, useRef } from 'react';
+import { menuAPI, categoryAPI, stockAPI, optionTemplateAPI, BACKEND_URL } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineTag } from 'react-icons/hi';
 
 const MenuManagement = () => {
+  const menuDialog = useRef(null);
+  const [optionGroups, setOptionGroups] = useState([]);
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState('');
+  const [deletingTemplate, setDeletingTemplate] = useState(null);
+  const [materials, setMaterials] = useState([]);
+  const [opening, setOpening] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [menus, setMenus] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +25,9 @@ const MenuManagement = () => {
   
   const [showModal, setShowModal] = useState(false);
   const [showCatModal, setShowCatModal] = useState(false);
+  useEffect(() => {
+    if (showModal) menuDialog.current?.showModal();
+  }, [showModal]);
   const [editMenu, setEditMenu] = useState(null);
   const [editCat, setEditCat] = useState(null);
   
@@ -32,8 +45,30 @@ const MenuManagement = () => {
 
   const loadData = async () => {
     setLoading(true);
-    await Promise.all([loadMenus(), loadCategories()]);
+    await Promise.all([loadMenus(), loadCategories(), loadTemplates()]);
     setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!isManager) return;
+    stockAPI.getAll().then((res) => setMaterials(res.data.data)).catch(() => toast.error('Daftar bahan belum dapat dimuat.'));
+  }, [isManager]);
+
+  const loadTemplates = async () => {
+    if (!isManager) return;
+    setTemplatesLoading(true); setTemplatesError('');
+    try { const res = await optionTemplateAPI.getAll(); setTemplates(res.data.data); }
+    catch { setTemplatesError('Daftar add-on belum dapat dimuat.'); }
+    finally { setTemplatesLoading(false); }
+  };
+  const deleteTemplate = async (template) => {
+    setDeletingTemplate(template.id);
+    try {
+      await optionTemplateAPI.delete(template.id);
+      setTemplates((prev) => prev.filter((t) => t.id !== template.id));
+      toast.success('Dihapus dari daftar tersimpan. Opsi pada menu tetap ada.');
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal menghapus add-on tersimpan.'); }
+    finally { setDeletingTemplate(null); }
   };
 
   const loadMenus = async () => {
@@ -54,28 +89,46 @@ const MenuManagement = () => {
 
   // Menu Handlers
   const openCreateMenu = () => {
+    loadTemplates();
     setEditMenu(null);
+    setOptionGroups([]);
     setForm({ name: '', description: '', price: '', category_id: categories[0]?.id || '', is_available: true });
     setImageFile(null);
     setShowModal(true);
   };
 
-  const openEditMenu = (menu) => {
-    setEditMenu(menu);
-    setForm({
-      name: menu.name, description: menu.description || '',
-      price: menu.price, category_id: menu.category_id,
-      is_available: menu.is_available
-    });
-    setImageFile(null);
-    setShowModal(true);
+  const openEditMenu = async (menu) => {
+    setOpening(true);
+    try {
+      const res = await menuAPI.getOptions(menu.id);
+      loadTemplates();
+      setEditMenu(menu);
+      setOptionGroups(res.data.data);
+      setForm({ name: menu.name, description: menu.description || '', price: menu.price, category_id: menu.category_id, is_available: menu.is_available });
+      setImageFile(null);
+      setShowModal(true);
+    } catch { toast.error('Pilihan menu belum dapat dimuat. Coba lagi.'); }
+    finally { setOpening(false); }
+  };
+  const toggleOptionAvailability = async (group, choice) => {
+    setSaving(true);
+    try {
+      await menuAPI.setOptionAvailability(editMenu.id, group.id, choice.id, !choice.is_available);
+      const res = await menuAPI.getOptions(editMenu.id);
+      setOptionGroups(res.data.data);
+      await loadMenus();
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal mengubah ketersediaan.'); }
+    finally { setSaving(false); }
   };
 
   const handleMenuSubmit = async (e) => {
     e.preventDefault();
+    if (!isManager) return;
+    setSaving(true);
     try {
       const formData = new FormData();
       Object.keys(form).forEach(key => formData.append(key, form[key]));
+      formData.append('option_groups', JSON.stringify(optionGroups));
       if (imageFile) formData.append('image', imageFile);
 
       if (editMenu) {
@@ -86,8 +139,9 @@ const MenuManagement = () => {
         toast.success('Menu ditambahkan.');
       }
       setShowModal(false);
+      loadTemplates();
       loadMenus();
-    } catch (err) { toast.error(err.response?.data?.message || 'Gagal menyimpan menu.'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'Gagal menyimpan menu.'); } finally { setSaving(false); }
   };
 
   const handleDeleteMenu = async (id) => {
@@ -201,9 +255,10 @@ const MenuManagement = () => {
                   </td>
                   <td>
                     <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                      {!isManager && <button className="btn btn-secondary btn-sm" disabled={opening} onClick={() => openEditMenu(m)}>Pilihan</button>}
                       {isManager && (
                         <>
-                          <button className="btn btn-ghost btn-sm" onClick={() => openEditMenu(m)}><HiOutlinePencil /></button>
+                          <button className="btn btn-ghost btn-sm" aria-label={`Edit ${m.name}`} disabled={opening} onClick={() => openEditMenu(m)}><HiOutlinePencil /></button>
                           <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteMenu(m.id)} style={{ color: 'var(--danger-500)' }}><HiOutlineTrash /></button>
                         </>
                       )}
@@ -223,44 +278,45 @@ const MenuManagement = () => {
 
       {/* Menu Modal */}
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <dialog ref={menuDialog} className="modal-content menu-editor-dialog" aria-labelledby="menu-editor-title" onCancel={(e) => { if (saving) e.preventDefault(); else setShowModal(false); }} onClick={(e) => { if (!saving && e.target === e.currentTarget) { const box = e.currentTarget.getBoundingClientRect(); if (e.clientX < box.left || e.clientX > box.right || e.clientY < box.top || e.clientY > box.bottom) setShowModal(false); } }}>
             <div className="modal-header">
-              <h2>{editMenu ? 'Edit Menu' : 'Tambah Menu Baru'}</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}>✕</button>
+              <h2 id="menu-editor-title">{!isManager ? `Pilihan ${editMenu?.name}` : editMenu ? 'Edit Menu' : 'Tambah Menu Baru'}</h2>
+              <button className="btn btn-ghost btn-sm" disabled={saving} aria-label="Tutup menu" onClick={() => setShowModal(false)}>✕</button>
             </div>
-            <form onSubmit={handleMenuSubmit}>
+            <form onSubmit={handleMenuSubmit} className="menu-edit-form">
               <div className="modal-body">
+                {isManager && <>
                 <div className="form-group">
-                  <label className="form-label">Nama Menu *</label>
-                  <input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  <label className="form-label" htmlFor="menu-name">Nama Menu *</label>
+                  <input id="menu-name" className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Kategori *</label>
-                  <select className="form-select" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} required>
+                  <label className="form-label" htmlFor="menu-category">Kategori *</label>
+                  <select id="menu-category" className="form-select" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} required>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Harga *</label>
-                  <input className="form-input" type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
+                  <label className="form-label" htmlFor="menu-price">Harga *</label>
+                  <input id="menu-price" className="form-input" type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Deskripsi</label>
-                  <textarea className="form-input" rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                  <label className="form-label" htmlFor="menu-description">Deskripsi</label>
+                  <textarea id="menu-description" className="form-input" rows="3" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
                 </div>
-                <div className="form-group">
+                </>}
+                <MenuOptionsEditor groups={optionGroups} onChange={setOptionGroups} materials={materials} disabled={saving} availabilityOnly={!isManager} onAvailability={toggleOptionAvailability} templates={templates} templatesLoading={templatesLoading} templatesError={templatesError} onReloadTemplates={loadTemplates} onDeleteTemplate={deleteTemplate} deletingTemplate={deletingTemplate} />
+                {isManager && <div className="form-group">
                   <label className="form-label">Foto Menu {editMenu && '(Kosongkan jika tidak diubah)'}</label>
                   <input type="file" className="form-input" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
-                </div>
+                </div>}
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                <button type="submit" className="btn btn-primary">{editMenu ? 'Simpan' : 'Tambah'}</button>
+                <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => setShowModal(false)}>{isManager ? 'Batal' : 'Tutup'}</button>
+                <button type="submit" hidden={!isManager} disabled={saving} className="btn btn-primary">{saving ? 'Menyimpan...' : editMenu ? 'Simpan' : 'Tambah'}</button>
               </div>
             </form>
-          </div>
-        </div>
+        </dialog>
       )}
 
       {/* Category Modal */}

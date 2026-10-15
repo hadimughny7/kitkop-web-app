@@ -1,3 +1,5 @@
+import { optionText } from '../../utils/menuOptions';
+import '../../components/MenuOptions.css';
 import { useState, useEffect, useCallback } from 'react';
 import { orderAPI, BACKEND_URL } from '../../services/api';
 import io from 'socket.io-client';
@@ -237,6 +239,7 @@ const KitchenDashboard = () => {
                               )}
                             </div>
                           </div>
+                      <span className="selected-options">{optionText(item)}</span>
                       {item.notes && <span className="item-notes">Catatan: {item.notes}</span>}
                         </li>
                       );

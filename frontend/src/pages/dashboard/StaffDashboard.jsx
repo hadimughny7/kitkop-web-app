@@ -1,3 +1,4 @@
+import { optionText } from '../../utils/menuOptions';
 import { Link } from 'react-router-dom';
 import { HiOutlineArrowRight, HiOutlineCash, HiOutlineCheckCircle, HiOutlineClipboardList, HiOutlineClock, HiOutlineRefresh, HiOutlineShoppingCart } from 'react-icons/hi';
 import useStaffDashboard from './useStaffDashboard';
@@ -34,7 +35,7 @@ function OrderList({ orders, emptyText, limit = 6 }) {
           </div>
           <p className="staff-order-meta">{order.table ? `Meja ${order.table.table_number}` : 'Takeaway'} · {order.customer?.name || 'Pelanggan'} · {time(order.created_at)} WIB</p>
           <p className="staff-order-items">{(order.items || []).filter((item) => item.status !== 'rejected').slice(0, 3)
-            .map((item) => `${item.qty}× ${item.menu?.name || 'Menu'}`).join(', ')}
+            .map((item) => `${item.qty}× ${item.menu?.name || 'Menu'}${optionText(item) ? ` (${optionText(item)})` : ''}`).join(', ')}
             {(order.items || []).filter((item) => item.status !== 'rejected').length > 3 && ' · dan menu lainnya'}
           </p>
         </li>

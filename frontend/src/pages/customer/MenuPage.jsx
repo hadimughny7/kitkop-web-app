@@ -1,3 +1,5 @@
+import MenuOptionPicker from '../../components/MenuOptionPicker';
+import { activeGroups } from '../../utils/menuOptions';
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
@@ -9,6 +11,7 @@ import './CustomerPages.css';
 const MenuPage = () => {
   const [searchParams] = useSearchParams();
   const tableNum = searchParams.get('table');
+  const [picking, setPicking] = useState(null);
   const [menus, setMenus] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
@@ -43,27 +46,27 @@ const MenuPage = () => {
   });
 
   const getCartItem = (menuId) => items.find((item) => item.menu_id === menuId);
-  const getCartQty = (menuId) => getCartItem(menuId)?.qty || 0;
+  const getCartQty = (menuId) => items.filter((i) => i.menu_id === menuId).reduce((n,i) => n + i.qty, 0);
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
 
   const handleAdd = (menu) => {
+    if (activeGroups(menu).length) { setPicking(menu); return; }
     addItem(menu);
     toast.success(`${menu.name} ditambahkan!`, { duration: 1500, icon: '✅' });
   };
 
-  const handleIncrement = (menu) => {
-    addItem(menu);
-  };
+  const handleIncrement = handleAdd;
 
   const handleDecrement = (menuId) => {
-    const qty = getCartQty(menuId);
+    const line = getCartItem(menuId);
+    const qty = line?.qty || 0;
     if (qty <= 1) {
-      removeItem(menuId);
+      removeItem(line.line_id);
       toast('Item dihapus dari keranjang', { duration: 1500, icon: '🗑️' });
     } else {
-      updateQty(menuId, qty - 1);
+      updateQty(line.line_id, qty - 1);
     }
   };
 
@@ -145,7 +148,7 @@ const MenuPage = () => {
                   <p className="menu-card-name">{menu.name}</p>
                   <p className="menu-card-price">{formatCurrency(menu.price)}</p>
 
-                  {inCart ? (
+                  {inCart && !activeGroups(menu).length ? (
                     <div className="menu-card-qty-control">
                       <button
                         className="menu-qty-btn minus"
@@ -186,6 +189,7 @@ const MenuPage = () => {
         )}
       </div>
 
+      {picking && <MenuOptionPicker key={picking.id} menu={picking} onClose={() => setPicking(null)} onConfirm={(selections, notes) => { addItem(picking, selections, notes); setPicking(null); toast.success('Ditambahkan ke keranjang.'); }} />}
       <div className="cart-summary-announcement" role="status" aria-atomic="true">
         {itemCount > 0 ? `${itemCount} item di keranjang. Subtotal ${formatCurrency(subtotal)}.` : 'Keranjang kosong.'}
       </div>

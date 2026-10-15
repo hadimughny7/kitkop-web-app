@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getMenus, getMenuById, createMenu, updateMenu, deleteMenu, toggleAvailability } = require('../controllers/menuController');
+const { getMenus, getMenuOptions, setMenuOptionAvailability, getMenuById, createMenu, updateMenu, deleteMenu, toggleAvailability } = require('../controllers/menuController');
 const { verifyToken, authorizeRoles } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
@@ -9,6 +9,8 @@ router.get('/', getMenus);
 router.get('/:id', getMenuById);
 
 // Staff-only routes
+router.get('/:id/options', verifyToken, authorizeRoles('owner', 'manajer', 'kasir'), getMenuOptions);
+router.patch('/:id/options/:groupId/choices/:choiceId/availability', verifyToken, authorizeRoles('owner', 'manajer', 'kasir'), setMenuOptionAvailability);
 router.post('/', verifyToken, authorizeRoles('owner', 'manajer'), upload.single('image'), createMenu);
 router.put('/:id', verifyToken, authorizeRoles('owner', 'manajer'), upload.single('image'), updateMenu);
 router.delete('/:id', verifyToken, authorizeRoles('owner', 'manajer'), deleteMenu);

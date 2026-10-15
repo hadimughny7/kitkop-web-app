@@ -26,6 +26,11 @@ const OrderItem = sequelize.define('OrderItem', {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false,
   },
+  base_price: { type: DataTypes.DECIMAL(12, 2), allowNull: true },
+  selected_options: { type: DataTypes.JSON, allowNull: true },
+  stock_usage: { type: DataTypes.JSON, allowNull: true },
+  stock_deducted: { type: DataTypes.BOOLEAN, defaultValue: false },
+  stock_refunded: { type: DataTypes.BOOLEAN, defaultValue: false },
   notes: {
     type: DataTypes.TEXT,
     allowNull: true,

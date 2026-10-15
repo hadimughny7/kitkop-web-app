@@ -56,6 +56,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/menus', menuRoutes);
+app.use('/api/option-groups', require('./routes/optionGroupRoutes'));
+app.use('/api/option-templates', require('./routes/optionTemplateRoutes'));
 app.use('/api/categories', categoryRoutes);
 app.use('/api/tables', tableRoutes);
 app.use('/api/orders', orderRoutes);

@@ -60,6 +60,8 @@ export const userAPI = {
 export const menuAPI = {
   getAll: (params) => api.get('/menus', { params }),
   getById: (id) => api.get(`/menus/${id}`),
+  getOptions: (id) => api.get(`/menus/${id}/options`),
+  setOptionAvailability: (id, groupId, choiceId, is_available) => api.patch(`/menus/${id}/options/${groupId}/choices/${choiceId}/availability`, { is_available }),
   create: (formData) => api.post('/menus', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
@@ -165,3 +167,15 @@ export const settingAPI = {
 };
 
 export default api;
+
+export const optionGroupAPI = {
+  getAll: () => api.get('/option-groups'),
+  create: (data) => api.post('/option-groups', data),
+  update: (id, data) => api.put(`/option-groups/${id}`, data),
+  setAvailability: (id, choiceId, is_available) => api.patch(`/option-groups/${id}/choices/${choiceId}/availability`, { is_available }),
+};
+
+export const optionTemplateAPI = {
+  getAll: () => api.get('/option-templates'),
+  delete: (id) => api.delete(`/option-templates/${id}`),
+};

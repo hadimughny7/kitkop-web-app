@@ -1,4 +1,5 @@
-const { Order, OrderItem, OrderStatusLog, Customer, Table, Menu, MenuCategory, Transaction, User, Setting } = require('../models');
+const { Order, OrderItem, OrderStatusLog, Customer, Table, Menu, MenuCategory, Transaction, User, Setting, OptionGroup, MenuRecipe } = require('../models');
+const { resolveOptions, buildStockUsage, fail } = require('../services/menuOptions');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { refundStockForOrderItem } = require('./stockController');
@@ -74,7 +75,8 @@ const createOrder = async (req, res, next) => {
 
     for (const item of items) {
       const menu = await Menu.findByPk(item.menu_id, {
-        include: [{ model: MenuCategory, as: 'category' }],
+        include: [{ model: MenuCategory, as: 'category' }, { model: OptionGroup, as: 'optionGroups' }, { model: MenuRecipe, as: 'recipes' }],
+        transaction: t,
       });
 
       if (!menu) {
@@ -87,7 +89,11 @@ const createOrder = async (req, res, next) => {
         return res.status(400).json({ success: false, message: `Menu "${menu.name}" sedang tidak tersedia.` });
       }
 
-      const itemTotal = parseFloat(menu.price) * item.qty;
+      if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 999) fail('Jumlah item harus bilangan bulat 1-999.');
+      const { selections, extra } = resolveOptions(menu.optionGroups, item.option_ids);
+      const unitPrice = Math.round((Number(menu.price) + extra) * 100) / 100;
+      if (item.expected_price !== undefined && Math.round(Number(item.expected_price) * 100) !== Math.round(unitPrice * 100)) fail(`Harga ${menu.name} berubah. Silakan perbarui pilihan sebelum memesan.`, 409);
+      const itemTotal = unitPrice * item.qty;
       subtotal += itemTotal;
 
       // Determine item_type from category
@@ -106,7 +112,10 @@ const createOrder = async (req, res, next) => {
       orderItems.push({
         menu_id: item.menu_id,
         qty: item.qty,
-        price: parseFloat(menu.price),
+        price: unitPrice,
+        base_price: Number(menu.price),
+        selected_options: selections.map(({ ingredients, ...selection }) => selection),
+        stock_usage: buildStockUsage(menu.recipes, selections),
         notes: item.notes || null,
         item_type,
       });
@@ -179,7 +188,7 @@ const createOrder = async (req, res, next) => {
     // Fetch complete order for response
     const completeOrder = await Order.findByPk(order.id, {
       include: [
-        { model: OrderItem, as: 'items', include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
+        { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
         { model: Customer, as: 'customer' },
         { model: Table, as: 'table' },
         { model: User, as: 'cashier', attributes: ['id', 'name'] },
@@ -226,7 +235,7 @@ const getOrders = async (req, res, next) => {
     const { count, rows } = await Order.findAndCountAll({
       where,
       include: [
-        { model: OrderItem, as: 'items', include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
+        { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
         { model: Customer, as: 'customer', attributes: ['id', 'name', 'phone', 'email'] },
         { model: Table, as: 'table', attributes: ['id', 'table_number'] },
         { model: Transaction, as: 'transaction', attributes: ['id', 'status', 'payment_method'] },
@@ -261,7 +270,7 @@ const getOrderById = async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.id, {
       include: [
-        { model: OrderItem, as: 'items', include: [{ model: Menu, as: 'menu' }] },
+        { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu' }] },
         { model: Customer, as: 'customer' },
         { model: Table, as: 'table' },
         { model: Transaction, as: 'transaction' },
@@ -293,7 +302,7 @@ const trackOrder = async (req, res, next) => {
     const order = await Order.findOne({
       where: { order_number: req.params.orderNumber },
       include: [
-        { model: OrderItem, as: 'items', include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'price', 'image'] }] },
+        { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'price', 'image'] }] },
         { model: Customer, as: 'customer', attributes: ['name', 'phone'] },
         { model: Table, as: 'table', attributes: ['table_number'] },
         { model: Transaction, as: 'transaction', attributes: ['status', 'payment_method'] },
@@ -392,6 +401,7 @@ const rejectOrderItem = async (req, res, next) => {
     const orderItem = await OrderItem.findOne({
       where: { id: itemId, order_id: orderId },
       transaction: t,
+      lock: t.LOCK.UPDATE,
     });
 
     if (!orderItem) {
@@ -458,7 +468,7 @@ const rejectOrderItem = async (req, res, next) => {
     // Fetch updated order to broadcast
     const completeOrder = await Order.findByPk(order.id, {
       include: [
-        { model: OrderItem, as: 'items', include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
+        { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
         { model: Customer, as: 'customer' },
         { model: Table, as: 'table' },
       ],

@@ -218,6 +218,7 @@ const paymentCallback = async (req, res, next) => {
         const order = await Order.findByPk(trx.order_id, {
           include: [{ model: OrderItem, as: 'items' }],
           transaction: t,
+          lock: t.LOCK.UPDATE,
         });
 
         if (order && order.status === 'pending') {
@@ -264,6 +265,7 @@ const paymentCallback = async (req, res, next) => {
         const order = await Order.findByPk(trx.order_id, {
           include: [{ model: OrderItem, as: 'items' }],
           transaction: t,
+          lock: t.LOCK.UPDATE,
         });
 
         if (order && (order.status === 'pending' || order.status === 'cancelled')) {
@@ -357,7 +359,7 @@ const simulatePayment = async (req, res, next) => {
       include: [{ model: OrderItem, as: 'items' }],
       transaction: t,
     });
-    if (order) {
+    if (order && order.status === 'pending') {
       order.status = 'confirmed';
       await order.save({ transaction: t });
 
@@ -395,7 +397,8 @@ const payCash = async (req, res, next) => {
   try {
     const order = await Order.findByPk(req.params.orderId, {
       include: [{ model: OrderItem, as: 'items' }],
-      transaction: t
+      transaction: t,
+      lock: t.LOCK.UPDATE,
     });
 
     if (!order) {
@@ -411,6 +414,10 @@ const payCash = async (req, res, next) => {
     // Check if transaction exists
     const existingTrx = await Transaction.findOne({ where: { order_id: order.id }, transaction: t });
     
+    if (existingTrx?.status === 'paid') {
+      await t.commit();
+      return res.json({ success: true, message: 'Pesanan sudah dibayar.', data: existingTrx });
+    }
     let trx;
     if (existingTrx) {
       existingTrx.status = 'paid';

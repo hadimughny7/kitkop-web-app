@@ -1,10 +1,13 @@
-import { useState, useEffect, useRef } from 'react';
+import MenuOptionPicker from '../../components/MenuOptionPicker';
+import { activeGroups, optionText, makeCartItem, addCartLine, replaceCartLine } from '../../utils/menuOptions';
+import { useState, useEffect } from 'react';
 import { orderAPI, paymentAPI, menuAPI, categoryAPI, tableAPI, settingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCash, HiOutlinePlus, HiOutlineMinus, HiOutlineTrash, HiOutlineSearch, HiOutlineShoppingCart } from 'react-icons/hi';
 import './POSDashboard.css';
 
 const POSDashboard = () => {
+  const [picking, setPicking] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // === State untuk POS ===
@@ -56,37 +59,19 @@ const POSDashboard = () => {
 
   const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
 
-  const getPosCartQty = (menuId) => {
-    const item = posCart.find((i) => i.menu_id === menuId);
-    return item ? item.qty : 0;
-  };
-
+  const getPosCartQty = (menuId) => posCart.filter((i) => i.menu_id === menuId).reduce((n,i) => n + i.qty, 0);
   const posAddItem = (menu) => {
-    setPosCart((prev) => {
-      const existing = prev.find((i) => i.menu_id === menu.id);
-      if (existing) {
-        return prev.map((i) => i.menu_id === menu.id ? { ...i, qty: i.qty + 1 } : i);
-      }
-      return [...prev, { menu_id: menu.id, name: menu.name, price: parseFloat(menu.price), qty: 1, notes: '' }];
-    });
+    if (activeGroups(menu).length) { setPicking({ menu }); return; }
+    setPosCart((prev) => addCartLine(prev, makeCartItem(menu)));
   };
-
-  const posDecrementItem = (menuId) => {
-    setPosCart((prev) => {
-      const item = prev.find((i) => i.menu_id === menuId);
-      if (!item) return prev;
-      if (item.qty <= 1) return prev.filter((i) => i.menu_id !== menuId);
-      return prev.map((i) => i.menu_id === menuId ? { ...i, qty: i.qty - 1 } : i);
-    });
+  const editOptions = async (item) => {
+    try { const res = await menuAPI.getById(item.menu_id); setPicking({ menu: res.data.data, item }); }
+    catch { toast.error('Pilihan menu belum dapat dimuat.'); }
   };
-
-  const posRemoveItem = (menuId) => {
-    setPosCart((prev) => prev.filter((i) => i.menu_id !== menuId));
-  };
-
-  const posUpdateNotes = (menuId, notes) => {
-    setPosCart((prev) => prev.map((i) => i.menu_id === menuId ? { ...i, notes } : i));
-  };
+  const posDecrementItem = (id) => setPosCart((prev) => prev.flatMap((i) => i.line_id !== id ? [i] : i.qty > 1 ? [{ ...i, qty: i.qty - 1 }] : []));
+  const posRemoveItem = (id) => setPosCart((prev) => prev.filter((i) => i.line_id !== id));
+  const posUpdateNotes = (id, notes) => setPosCart((prev) => prev.map((i) => i.line_id === id ? { ...i, notes } : i));
+  const posIncrementItem = (id) => setPosCart((prev) => prev.map((i) => i.line_id === id ? { ...i, qty: i.qty + 1 } : i));
 
   const posSubtotal = posCart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const posTax = Math.round(posSubtotal * (taxPercent / 100));
@@ -116,6 +101,8 @@ const POSDashboard = () => {
           menu_id: item.menu_id,
           qty: item.qty,
           notes: item.notes,
+          option_ids: item.option_ids,
+          expected_price: item.price,
         })),
       };
 
@@ -142,6 +129,11 @@ const POSDashboard = () => {
 
   return (
     <div className="pos-page">
+      {picking && <MenuOptionPicker key={picking.item?.line_id || picking.menu.id} menu={picking.menu} initialItem={picking.item} onClose={() => setPicking(null)} onConfirm={(selections, notes) => {
+        const line = makeCartItem(picking.menu, selections, notes);
+        setPosCart((prev) => picking.item ? replaceCartLine(prev, picking.item.line_id, line) : addCartLine(prev, line));
+        setPicking(null);
+      }} />}
       <div className="page-header" style={{ marginBottom: 'var(--space-4)' }}>
         <div>
           <h1 className="page-title">Kasir / POS</h1>
@@ -260,30 +252,32 @@ const POSDashboard = () => {
               </div>
             ) : (
               posCart.map((item) => (
-                <div key={item.menu_id} className="pos-cart-item">
+                <div key={item.line_id} className="pos-cart-item">
                   <div className="pos-cart-item-info">
                     <p className="pos-cart-item-name">{item.name}</p>
+                    <p className="selected-options">{optionText(item)}</p>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => editOptions(item)}>Edit pilihan</button>
                     <p className="pos-cart-item-price">{formatCurrency(item.price * item.qty)}</p>
                     <input
                       type="text"
                       className="pos-cart-item-notes"
                       placeholder="Catatan..."
                       value={item.notes}
-                      onChange={(e) => posUpdateNotes(item.menu_id, e.target.value)}
+                      onChange={(e) => posUpdateNotes(item.line_id, e.target.value)}
                       autoComplete="off"
                     />
                   </div>
                   <div className="pos-cart-item-actions">
                     <div className="pos-cart-qty-control">
-                      <button className="pos-qty-btn" onClick={() => posDecrementItem(item.menu_id)}>
+                      <button className="pos-qty-btn" onClick={() => posDecrementItem(item.line_id)}>
                         <HiOutlineMinus />
                       </button>
                       <span className="pos-qty-val">{item.qty}</span>
-                      <button className="pos-qty-btn" onClick={() => posAddItem({ id: item.menu_id, name: item.name, price: item.price })}>
+                      <button className="pos-qty-btn" onClick={() => posIncrementItem(item.line_id)}>
                         <HiOutlinePlus />
                       </button>
                     </div>
-                    <button className="pos-remove-btn" onClick={() => posRemoveItem(item.menu_id)}>
+                    <button className="pos-remove-btn" onClick={() => posRemoveItem(item.line_id)}>
                       <HiOutlineTrash />
                     </button>
                   </div>

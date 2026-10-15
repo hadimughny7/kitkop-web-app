@@ -1,3 +1,5 @@
+import { optionText } from '../../utils/menuOptions';
+import '../../components/MenuOptions.css';
 import { useState, useEffect, useRef } from 'react';
 import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
 import toast from 'react-hot-toast';
@@ -423,6 +425,7 @@ const OrderDashboard = () => {
                       <div>
                         <p style={{ fontWeight: 500 }}>{item.menu?.name || `Item #${item.menu_id}`}</p>
                         <p style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>{item.qty} × {formatCurrency(item.price)}</p>
+                        <p className="selected-options">{optionText(item)}</p>
                         {item.notes && <p style={{ fontSize: '12px', color: 'var(--warning-600)', marginTop: '2px' }}>Catatan: {item.notes}</p>}
                       </div>
                       <span style={{ fontWeight: 600 }}>{formatCurrency(item.qty * parseFloat(item.price))}</span>
@@ -520,6 +523,7 @@ const OrderDashboard = () => {
                   </span>
                   <span>{formatCurrency(item.qty * parseFloat(item.price))}</span>
                 </div>
+                <div className="receipt-item-notes">{optionText(item)}</div>
                 {item.notes && <div className="receipt-item-notes">Catatan: {item.notes}</div>}
               </div>
             ))}

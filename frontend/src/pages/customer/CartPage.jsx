@@ -1,6 +1,8 @@
+import MenuOptionPicker from '../../components/MenuOptionPicker';
+import { optionText } from '../../utils/menuOptions';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
-import { orderAPI } from '../../services/api';
+import { orderAPI, menuAPI } from '../../services/api';
 import { HiOutlineArrowLeft, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineCake, HiOutlineInformationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
@@ -10,16 +12,23 @@ const CartPage = () => {
   const [searchParams] = useSearchParams();
   const tableNum = searchParams.get('table');
   const navigate = useNavigate();
+  const [editing, setEditing] = useState(null);
+  const [opening, setOpening] = useState(false);
   const [loading, setLoading] = useState(false);
   const {
     items, subtotal, tax, serviceCharge, total, tableId, customerInfo,
     taxPercent, servicePercent,
-    updateQty, updateNotes, removeItem, clearCart,
+    updateQty, updateNotes, updateOptions, removeItem, clearCart,
   } = useCart();
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
 
+  const editOptions = async (item) => {
+    setOpening(true);
+    try { const res = await menuAPI.getById(item.menu_id); setEditing({ menu: res.data.data, item }); }
+    catch { toast.error('Pilihan menu belum dapat dimuat.'); } finally { setOpening(false); }
+  };
   const handleCheckout = async () => {
     if (items.length === 0) {
       toast.error('Keranjang masih kosong.');
@@ -38,6 +47,8 @@ const CartPage = () => {
           menu_id: item.menu_id,
           qty: item.qty,
           notes: item.notes,
+          option_ids: item.option_ids,
+          expected_price: item.price,
         })),
       };
 
@@ -56,6 +67,7 @@ const CartPage = () => {
 
   return (
     <div className="customer-page cart-page">
+      {editing && <MenuOptionPicker key={editing.item.line_id} menu={editing.menu} initialItem={editing.item} onClose={() => setEditing(null)} onConfirm={(selections, notes) => { updateOptions(editing.item.line_id, editing.menu, selections, notes); setEditing(null); }} />}
       <div className="customer-container">
         <div className="cart-header">
           <button className="back-btn" aria-label="Kembali ke menu" onClick={() => navigate(`/order/menu?table=${tableNum}`)}>
@@ -86,15 +98,17 @@ const CartPage = () => {
           <>
             <div className="cart-items">
               {items.map((item) => (
-                <div key={item.menu_id} className="cart-item">
+                <div key={item.line_id} className="cart-item">
                   <div className="cart-item-img-placeholder"><HiOutlineCake aria-hidden="true" /></div>
                   <div className="cart-item-info">
                     <p className="cart-item-name">{item.name}</p>
+                    <p className="selected-options">{optionText(item)}</p>
+                    <button type="button" className="btn btn-ghost btn-sm" disabled={opening} onClick={() => editOptions(item)}>Edit pilihan</button>
                     <p className="cart-item-price">{formatCurrency(item.price)}</p>
                     <div className="qty-control">
-                      <button className="qty-btn" aria-label={`Kurangi ${item.name}`} onClick={() => updateQty(item.menu_id, item.qty - 1)}>−</button>
+                      <button className="qty-btn" aria-label={`Kurangi ${item.name}`} onClick={() => updateQty(item.line_id, item.qty - 1)}>−</button>
                       <span className="qty-value">{item.qty}</span>
-                      <button className="qty-btn" aria-label={`Tambah ${item.name}`} onClick={() => updateQty(item.menu_id, item.qty + 1)}>+</button>
+                      <button className="qty-btn" aria-label={`Tambah ${item.name}`} onClick={() => updateQty(item.line_id, item.qty + 1)}>+</button>
                     </div>
                     <div className="cart-item-notes">
                       <input
@@ -102,11 +116,11 @@ const CartPage = () => {
                         placeholder="Catatan (opsional)"
                         aria-label={`Catatan untuk ${item.name}`}
                         value={item.notes}
-                        onChange={(e) => updateNotes(item.menu_id, e.target.value)}
+                        onChange={(e) => updateNotes(item.line_id, e.target.value)}
                       />
                     </div>
                   </div>
-                  <button className="cart-item-remove" aria-label={`Hapus ${item.name}`} onClick={() => removeItem(item.menu_id)}>
+                  <button className="cart-item-remove" aria-label={`Hapus ${item.name}`} onClick={() => removeItem(item.line_id)}>
                     <HiOutlineTrash />
                   </button>
                 </div>

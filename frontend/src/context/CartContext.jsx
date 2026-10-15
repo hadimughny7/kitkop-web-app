@@ -1,3 +1,4 @@
+import { makeCartItem, addCartLine, replaceCartLine } from '../utils/menuOptions';
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { settingAPI } from '../services/api';
 
@@ -32,48 +33,15 @@ export const CartProvider = ({ children }) => {
     fetchSettings();
   }, []);
 
-  const addItem = useCallback((menu) => {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.menu_id === menu.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.menu_id === menu.id ? { ...item, qty: item.qty + 1 } : item
-        );
-      }
-      return [
-        ...prev,
-        {
-          menu_id: menu.id,
-          name: menu.name,
-          price: parseFloat(menu.price),
-          image: menu.image,
-          qty: 1,
-          notes: '',
-          category: menu.category?.name || '',
-        },
-      ];
-    });
+  const addItem = useCallback((menu, selections = [], notes = '') => {
+    setItems((prev) => addCartLine(prev, makeCartItem(menu, selections, notes)));
   }, []);
-
-  const removeItem = useCallback((menuId) => {
-    setItems((prev) => prev.filter((item) => item.menu_id !== menuId));
+  const removeItem = useCallback((id) => setItems((prev) => prev.filter((item) => item.line_id !== id)), []);
+  const updateQty = useCallback((id, qty) => {
+    setItems((prev) => qty <= 0 ? prev.filter((i) => i.line_id !== id) : prev.map((i) => i.line_id === id ? { ...i, qty } : i));
   }, []);
-
-  const updateQty = useCallback((menuId, qty) => {
-    if (qty <= 0) {
-      removeItem(menuId);
-      return;
-    }
-    setItems((prev) =>
-      prev.map((item) => (item.menu_id === menuId ? { ...item, qty } : item))
-    );
-  }, [removeItem]);
-
-  const updateNotes = useCallback((menuId, notes) => {
-    setItems((prev) =>
-      prev.map((item) => (item.menu_id === menuId ? { ...item, notes } : item))
-    );
-  }, []);
+  const updateNotes = useCallback((id, notes) => setItems((prev) => prev.map((i) => i.line_id === id ? { ...i, notes } : i)), []);
+  const updateOptions = useCallback((id, menu, selections, notes) => setItems((prev) => replaceCartLine(prev, id, makeCartItem(menu, selections, notes))), []);
 
   const clearCart = useCallback(() => {
     setItems([]);
@@ -106,6 +74,7 @@ export const CartProvider = ({ children }) => {
         removeItem,
         updateQty,
         updateNotes,
+        updateOptions,
         clearCart,
       }}
     >
