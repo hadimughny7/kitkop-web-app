@@ -17,7 +17,7 @@ import CartPage from './pages/customer/CartPage';
 import OrderStatusPage from './pages/customer/OrderStatusPage';
 
 // Staff Pages
-import MainDashboard from './pages/dashboard/MainDashboard';
+import DashboardHome from './pages/dashboard/DashboardHome';
 import KitchenDashboard from './pages/kitchen/KitchenDashboard';
 import POSDashboard from './pages/kasir/POSDashboard';
 import OrderDashboard from './pages/orders/OrderDashboard';
@@ -51,11 +51,11 @@ function App() {
 
             {/* Staff Routes (Protected) */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
-              {/* General Dashboard (Owner, Manager) */}
-              <Route index element={<ProtectedRoute roles={['owner', 'manajer']}><MainDashboard /></ProtectedRoute>} />
+              {/* Dashboard content follows the authenticated staff role. */}
+              <Route index element={<DashboardHome />} />
               
               {/* Specific Stations */}
-              <Route path="kitchen" element={<ProtectedRoute roles={['owner', 'manajer', 'kitchen']}><KitchenDashboard /></ProtectedRoute>} />
+              <Route path="kitchen" element={<ProtectedRoute roles={['owner', 'manajer', 'kitchen', 'barista']}><KitchenDashboard /></ProtectedRoute>} />
               <Route path="kasir" element={<ProtectedRoute roles={['owner', 'manajer', 'kasir']}><POSDashboard /></ProtectedRoute>} />
               
               {/* Management */}

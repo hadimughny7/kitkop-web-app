@@ -122,7 +122,7 @@ const KitchenDashboard = () => {
       <div className="station-header">
         <div>
           <h1 className="page-title">Dapur & Barista</h1>
-          <p className="page-subtitle">Kelola pesanan makanan & snack</p>
+          <p className="page-subtitle">Kelola pesanan makanan, snack, dan minuman</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
           <button className="btn btn-secondary" onClick={loadOrders}>

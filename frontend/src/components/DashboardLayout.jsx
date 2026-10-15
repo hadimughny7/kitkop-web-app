@@ -47,7 +47,7 @@ const DashboardLayout = () => {
       label: 'Dapur & Barista',
       icon: <HiOutlineViewGrid />,
       path: '/dashboard/kitchen',
-      roles: ['owner', 'manajer', 'kitchen'],
+      roles: ['owner', 'manajer', 'kitchen', 'barista'],
     },
 
     {
@@ -72,7 +72,7 @@ const DashboardLayout = () => {
       label: 'Stok Bahan',
       icon: <HiOutlineCube />,
       path: '/dashboard/stocks',
-      roles: ['owner', 'manajer', 'kitchen'],
+      roles: ['owner', 'manajer', 'kitchen', 'barista'],
     },
     {
       label: 'Riwayat Stok',
@@ -109,6 +109,7 @@ const DashboardLayout = () => {
     manajer: 'Manajer',
     kasir: 'Kasir',
     kitchen: 'Dapur',
+    barista: 'Barista',
   };
 
   return (

@@ -28,17 +28,7 @@ const LoginPage = () => {
       const user = await doLogin({ login, password });
       toast.success(`Selamat datang, ${user.name}!`);
 
-      // Redirect based on role
-      switch (user.role) {
-        case 'kitchen':
-          navigate('/dashboard/kitchen');
-          break;
-        case 'kasir':
-          navigate('/dashboard/kasir');
-          break;
-        default:
-          navigate('/dashboard');
-      }
+      navigate('/dashboard');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Login gagal.');
     } finally {
