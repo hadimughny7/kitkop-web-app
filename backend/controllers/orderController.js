@@ -3,6 +3,7 @@ const { resolveOptions, buildStockUsage, fail } = require('../services/menuOptio
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { refundStockForOrderItem } = require('./stockController');
+const { assertOrderPaid, getProductionOrder } = require('../services/orderProduction');
 
 /**
  * Generate unique order number: ORD-YYYYMMDD-XXXX
@@ -328,36 +329,33 @@ const trackOrder = async (req, res, next) => {
 const updateOrderStatus = async (req, res, next) => {
   try {
     const { status, notes } = req.body;
-    const order = await Order.findByPk(req.params.id);
+    const order = await sequelize.transaction(async (transaction) => {
+      const order = await Order.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!order) fail('Pesanan tidak ditemukan.', 404);
 
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
-    }
+      const validTransitions = {
+        pending: ['confirmed', 'cancelled'],
+        confirmed: ['preparing', 'cancelled'],
+        preparing: ['completed', 'cancelled'],
+        completed: [],
+        cancelled: [],
+      };
+      if (!validTransitions[order.status]?.includes(status)) {
+        fail(`Tidak dapat mengubah status dari "${order.status}" ke "${status}".`);
+      }
+      if (['confirmed', 'preparing', 'completed'].includes(status)) {
+        await assertOrderPaid(order, transaction);
+      }
 
-    const validTransitions = {
-      pending: ['confirmed', 'preparing', 'cancelled'],
-      confirmed: ['preparing', 'cancelled'],
-      preparing: ['completed', 'cancelled'],
-      completed: [],
-      cancelled: [],
-    };
-
-    if (!validTransitions[order.status]?.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Tidak dapat mengubah status dari "${order.status}" ke "${status}".`,
-      });
-    }
-
-    order.status = status;
-    await order.save();
-
-    // Log status change
-    await OrderStatusLog.create({
-      order_id: order.id,
-      status,
-      changed_by: req.user ? req.user.id : null,
-      notes: notes || null,
+      order.status = status;
+      await order.save({ transaction });
+      await OrderStatusLog.create({
+        order_id: order.id,
+        status,
+        changed_by: req.user ? req.user.id : null,
+        notes: notes || null,
+      }, { transaction });
+      return order;
     });
 
     // Emit Socket.io event
@@ -506,67 +504,68 @@ const updateItemStatus = async (req, res, next) => {
     const { orderId, itemId } = req.params;
     const { status } = req.body;
 
-    const order = await Order.findByPk(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
-    }
+    const result = await sequelize.transaction(async (transaction) => {
+      const order = await getProductionOrder(orderId, transaction, ['confirmed', 'preparing']);
 
-    const orderItem = await OrderItem.findOne({
-      where: { id: itemId, order_id: orderId },
+      const orderItem = await OrderItem.findOne({
+        where: { id: itemId, order_id: orderId },
+        transaction,
+        lock: transaction.LOCK.UPDATE,
+      });
+
+      if (!orderItem) {
+        fail('Item pesanan tidak ditemukan.', 404);
+      }
+
+      if (orderItem.status === 'rejected') {
+        fail('Item sudah ditolak.');
+      }
+
+      const validItemTransitions = {
+        pending: ['preparing'],
+        preparing: ['completed'],
+        completed: [],
+      };
+
+      if (!validItemTransitions[orderItem.status]?.includes(status)) {
+        fail(`Tidak dapat mengubah status item dari "${orderItem.status}" ke "${status}".`);
+      }
+
+      orderItem.status = status;
+      if (status === 'completed') {
+        orderItem.completed_at = new Date();
+      }
+      await orderItem.save({ transaction });
+
+      // Check if all non-rejected items have the same status to auto-advance order
+      const allItems = await OrderItem.findAll({ where: { order_id: orderId }, transaction });
+      const activeItems = allItems.filter(i => i.status !== 'rejected');
+      const allPreparing = activeItems.every(i => i.status === 'preparing' || i.status === 'completed');
+      const allCompleted = activeItems.every(i => i.status === 'completed');
+
+      if (allCompleted && order.status !== 'completed') {
+        order.status = 'completed';
+        await order.save({ transaction });
+        await OrderStatusLog.create({
+          order_id: order.id,
+          status: 'completed',
+          changed_by: req.user ? req.user.id : null,
+          notes: 'Semua item selesai diproses.',
+        }, { transaction });
+      } else if (allPreparing && order.status === 'confirmed') {
+        order.status = 'preparing';
+        await order.save({ transaction });
+        await OrderStatusLog.create({
+          order_id: order.id,
+          status: 'preparing',
+          changed_by: req.user ? req.user.id : null,
+          notes: 'Item mulai diproses.',
+        }, { transaction });
+      }
+
+      return { order, orderItem };
     });
-
-    if (!orderItem) {
-      return res.status(404).json({ success: false, message: 'Item pesanan tidak ditemukan.' });
-    }
-
-    if (orderItem.status === 'rejected') {
-      return res.status(400).json({ success: false, message: 'Item sudah ditolak.' });
-    }
-
-    const validItemTransitions = {
-      pending: ['preparing'],
-      preparing: ['completed'],
-      completed: [],
-    };
-
-    if (!validItemTransitions[orderItem.status]?.includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: `Tidak dapat mengubah status item dari "${orderItem.status}" ke "${status}".`,
-      });
-    }
-
-    orderItem.status = status;
-    if (status === 'completed') {
-      orderItem.completed_at = new Date();
-    }
-    await orderItem.save();
-
-    // Check if all non-rejected items have the same status to auto-advance order
-    const allItems = await OrderItem.findAll({ where: { order_id: orderId } });
-    const activeItems = allItems.filter(i => i.status !== 'rejected');
-    const allPreparing = activeItems.every(i => i.status === 'preparing' || i.status === 'completed');
-    const allCompleted = activeItems.every(i => i.status === 'completed');
-
-    if (allCompleted && order.status !== 'completed') {
-      order.status = 'completed';
-      await order.save();
-      await OrderStatusLog.create({
-        order_id: order.id,
-        status: 'completed',
-        changed_by: req.user ? req.user.id : null,
-        notes: 'Semua item selesai diproses.',
-      });
-    } else if (allPreparing && order.status === 'confirmed') {
-      order.status = 'preparing';
-      await order.save();
-      await OrderStatusLog.create({
-        order_id: order.id,
-        status: 'preparing',
-        changed_by: req.user ? req.user.id : null,
-        notes: 'Item mulai diproses.',
-      });
-    }
+    const { order, orderItem } = result;
 
     // Emit socket event
     const io = req.app.get('io');
@@ -604,28 +603,30 @@ const processAllItems = async (req, res, next) => {
   try {
     const { orderId } = req.params;
 
-    const order = await Order.findByPk(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
-    }
+    const result = await sequelize.transaction(async (transaction) => {
+      const order = await getProductionOrder(orderId, transaction, ['confirmed', 'preparing']);
 
-    // Update all pending items to preparing
-    await OrderItem.update(
-      { status: 'preparing' },
-      { where: { order_id: orderId, status: 'pending' } }
-    );
+      // Update all pending items to preparing
+      await OrderItem.update(
+        { status: 'preparing' },
+        { where: { order_id: orderId, status: 'pending' }, transaction }
+      );
 
-    // Update order status to preparing
-    if (order.status === 'confirmed') {
-      order.status = 'preparing';
-      await order.save();
-      await OrderStatusLog.create({
-        order_id: order.id,
-        status: 'preparing',
-        changed_by: req.user ? req.user.id : null,
-        notes: 'Semua item mulai diproses.',
-      });
-    }
+      // Update order status to preparing
+      if (order.status === 'confirmed') {
+        order.status = 'preparing';
+        await order.save({ transaction });
+        await OrderStatusLog.create({
+          order_id: order.id,
+          status: 'preparing',
+          changed_by: req.user ? req.user.id : null,
+          notes: 'Semua item mulai diproses.',
+        }, { transaction });
+      }
+
+      return { order };
+    });
+    const { order } = result;
 
     const io = req.app.get('io');
     if (io) {
@@ -662,34 +663,36 @@ const completeAllItems = async (req, res, next) => {
   try {
     const { orderId } = req.params;
 
-    const order = await Order.findByPk(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
-    }
+    const result = await sequelize.transaction(async (transaction) => {
+      const order = await getProductionOrder(orderId, transaction, ['preparing']);
 
-    const now = new Date();
+      const now = new Date();
 
-    // Update all preparing items to completed
-    await OrderItem.update(
-      { status: 'completed', completed_at: now },
-      { where: { order_id: orderId, status: 'preparing' } }
-    );
+      // Update all preparing items to completed
+      await OrderItem.update(
+        { status: 'completed', completed_at: now },
+        { where: { order_id: orderId, status: 'preparing' }, transaction }
+      );
 
-    // Also complete any remaining pending items
-    await OrderItem.update(
-      { status: 'completed', completed_at: now },
-      { where: { order_id: orderId, status: 'pending' } }
-    );
+      // Also complete any remaining pending items
+      await OrderItem.update(
+        { status: 'completed', completed_at: now },
+        { where: { order_id: orderId, status: 'pending' }, transaction }
+      );
 
-    // Update order status to completed
-    order.status = 'completed';
-    await order.save();
-    await OrderStatusLog.create({
-      order_id: order.id,
-      status: 'completed',
-      changed_by: req.user ? req.user.id : null,
-      notes: 'Semua item selesai diproses.',
+      // Update order status to completed
+      order.status = 'completed';
+      await order.save({ transaction });
+      await OrderStatusLog.create({
+        order_id: order.id,
+        status: 'completed',
+        changed_by: req.user ? req.user.id : null,
+        notes: 'Semua item selesai diproses.',
+      }, { transaction });
+
+      return { order };
     });
+    const { order } = result;
 
     const io = req.app.get('io');
     if (io) {
