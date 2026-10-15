@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tableAPI } from '../../services/api';
 import { useCart } from '../../context/CartContext';
 import toast from 'react-hot-toast';
+import { HiOutlineQrcode, HiOutlineArrowRight } from 'react-icons/hi';
 import './CustomerPages.css';
 
 const WelcomePage = () => {
@@ -66,8 +67,8 @@ const WelcomePage = () => {
       <div className="customer-page">
         <div className="customer-container">
           <div className="error-card">
-            <span className="error-icon">😔</span>
-            <h2>Oops!</h2>
+            <HiOutlineQrcode className="error-icon" aria-hidden="true" />
+            <h2>Periksa QR meja Anda</h2>
             <p>{error}</p>
           </div>
         </div>
@@ -76,13 +77,13 @@ const WelcomePage = () => {
   }
 
   return (
-    <div className="customer-page">
+    <div className="customer-page welcome-page">
       <div className="customer-container">
         <div className="welcome-card">
           <div className="welcome-hero">
-            <img src="/logo-kitkop.png" alt="Kitkop.id" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(255,255,255,0.3)', display: 'block', margin: '0 auto' }} />
-            <h1>Selamat Datang di!</h1>
-            <p className="welcome-cafe">Kitkop.id</p>
+            <img src="/logo-kitkop.png" alt="Kitkop.id" className="welcome-brand" width="64" height="64" />
+            <p className="welcome-cafe">KITKOP.ID · PLACE FOR EVERYONE</p>
+            <h1>Ngopi dulu.{' '}<br /><span>Cerita kemudian.</span></h1>
             <div className="table-badge">
               <span>Meja</span>
               <strong>{tableNum}</strong>
@@ -90,6 +91,7 @@ const WelcomePage = () => {
           </div>
 
           <form className="welcome-form" onSubmit={handleSubmit}>
+            <div className="customer-section-heading"><span>01 / MULAI PESAN</span><HiOutlineArrowRight aria-hidden="true" /></div>
             <p className="form-intro">Silakan isi data diri Anda untuk mulai memesan:</p>
 
             <div className="form-group">
@@ -130,7 +132,7 @@ const WelcomePage = () => {
             </div>
 
             <button type="submit" className="btn btn-primary btn-lg welcome-btn">
-              Lihat Daftar Menu 🍽️
+              Lihat daftar menu <HiOutlineArrowRight aria-hidden="true" />
             </button>
           </form>
         </div>

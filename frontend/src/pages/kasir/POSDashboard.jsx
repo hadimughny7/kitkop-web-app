@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { orderAPI, paymentAPI, menuAPI, categoryAPI, tableAPI, settingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { HiOutlineCash, HiOutlinePlus, HiOutlineMinus, HiOutlineTrash, HiOutlineSearch } from 'react-icons/hi';
+import { HiOutlineCash, HiOutlinePlus, HiOutlineMinus, HiOutlineTrash, HiOutlineSearch, HiOutlineShoppingCart } from 'react-icons/hi';
 import './POSDashboard.css';
 
 const POSDashboard = () => {
@@ -157,7 +157,7 @@ const POSDashboard = () => {
         {/* LEFT: Menu Browser */}
         <div className="pos-menu-panel pos-inline-panel">
           <div className="pos-menu-panel-header">
-            <h2>📋 Pilih Menu</h2>
+            <h2>Pilih Menu</h2>
             <div className="pos-search-wrapper">
               <HiOutlineSearch className="pos-search-icon" />
               <input
@@ -214,7 +214,7 @@ const POSDashboard = () => {
         {/* RIGHT: Cart & Customer Info */}
         <div className="pos-cart-panel pos-inline-panel">
           <div className="pos-cart-panel-header">
-            <h2>🛒 Pesanan ({posItemCount} item)</h2>
+            <h2>Pesanan ({posItemCount} item)</h2>
           </div>
 
           {/* Customer info */}
@@ -254,7 +254,7 @@ const POSDashboard = () => {
           <div className="pos-cart-items">
             {posCart.length === 0 ? (
               <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
-                <span className="empty-icon">🛒</span>
+              <HiOutlineShoppingCart className="empty-icon" aria-hidden="true" />
                 <h3>Belum ada item</h3>
                 <p>Klik menu di sebelah kiri untuk menambahkan</p>
               </div>

@@ -116,7 +116,7 @@ const SettingsPage = () => {
               marginTop: 'var(--space-3)',
             }}>
               <p style={{ fontWeight: 600, marginBottom: 'var(--space-2)', fontSize: 'var(--text-sm)' }}>
-                📋 Preview (contoh subtotal Rp 100.000)
+                Preview (contoh subtotal Rp 100.000)
               </p>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 'var(--text-sm)', marginBottom: '4px' }}>
                 <span>Subtotal</span>

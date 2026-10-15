@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
-import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff } from 'react-icons/hi';
+import { HiOutlineMail, HiOutlineLockClosed, HiOutlineEye, HiOutlineEyeOff, HiOutlineArrowRight } from 'react-icons/hi';
 import './LoginPage.css';
 
 const LoginPage = () => {
@@ -45,15 +45,27 @@ const LoginPage = () => {
 
   return (
     <div className="login-page">
-      <div className="login-bg">
-        <div className="login-bg-pattern"></div>
-      </div>
+      <aside className="login-story" aria-label="Kitkop Kedai Kopi">
+        <a className="login-brand" href="/login">
+          <img src="/logo-kitkop.png" alt="" width="44" height="44" />
+          <span>kitkop.id</span>
+        </a>
+        <div className="login-story-copy">
+          <h2>Good coffee.{' '}<br />Good company.{' '}<br /><span>Every day.</span></h2>
+        </div>
+        <div className="login-brand-art" aria-hidden="true">
+          <div className="brand-sticker"><img src="/logo-kitkop.png" alt="" width="128" height="128" /><span>PLACE FOR<br />EVERYONE.</span><HiOutlineArrowRight /></div>
+          <span className="brand-art-note">Kopi yang baik, untuk siapa saja.</span>
+        </div>
+        <p className="login-story-footer">Kitkop.id <span>Sistem Buat Pahlawan kitkop.id</span></p>
+      </aside>
 
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <img src="/logo-kitkop.png" alt="Kitkop.id" style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', display: 'block', margin: '0 auto 12px' }} />
-            <h1>Kitkop.id</h1>
+            <p className="login-eyebrow"><span className="eyebrow-line" /> KITKOP WORKSPACE</p>
+            <h1>Siap untuk{' '}<br />hari yang baik?</h1>
+            <p>Masuk dan mulai aktivitas kedai hari ini.</p>
           </div>
 
           <form className="login-form" onSubmit={handleSubmit}>
@@ -93,6 +105,8 @@ const LoginPage = () => {
                 <button
                   type="button"
                   className="password-toggle"
+                  aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? <HiOutlineEyeOff /> : <HiOutlineEye />}
@@ -111,7 +125,7 @@ const LoginPage = () => {
                   Memproses...
                 </>
               ) : (
-                'Masuk'
+                <>Masuk ke workspace <HiOutlineArrowRight aria-hidden="true" /></>
               )}
             </button>
           </form>

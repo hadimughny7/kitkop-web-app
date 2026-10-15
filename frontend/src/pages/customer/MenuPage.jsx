@@ -48,14 +48,6 @@ const MenuPage = () => {
   const formatCurrency = (val) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
 
-  const getCategoryEmoji = (catName) => {
-    if (!catName) return '🍽️';
-    const name = catName.toLowerCase();
-    if (name.includes('minuman')) return '☕';
-    if (name.includes('snack')) return '🍿';
-    return '🍛';
-  };
-
   const handleAdd = (menu) => {
     addItem(menu);
     toast.success(`${menu.name} ditambahkan!`, { duration: 1500, icon: '✅' });
@@ -87,22 +79,27 @@ const MenuPage = () => {
   }
 
   return (
-    <div className="customer-page">
+    <div className="customer-page menu-browse-page">
       <div className="customer-container">
         <div className="menu-page-header">
           <div className="menu-page-top">
-            <h1>Daftar Menu</h1>
-            <button className="cart-fab" onClick={() => navigate(`/order/cart?table=${tableNum}`)}>
+            <div><p className="menu-brand-label">KITKOP.ID · MEJA {tableNum}</p><h1>Teman ngopi{' '}<br /><span>hari ini.</span></h1></div>
+            <button className="cart-fab" aria-label={`Lihat keranjang, ${itemCount} item`} onClick={() => navigate(`/order/cart?table=${tableNum}`)}>
               <HiOutlineShoppingCart />
               {itemCount > 0 && <span className="cart-badge">{itemCount}</span>}
             </button>
           </div>
 
+          <p className="menu-page-intro">Pilih favoritmu. Kami siapkan dari sini.</p>
+        </div>
+
+        <div className="menu-tools">
           <div className="search-bar" style={{ marginBottom: 'var(--space-3)' }}>
             <HiOutlineSearch className="search-icon" />
             <input
               type="text"
               placeholder="Cari menu..."
+              aria-label="Cari menu"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -112,6 +109,7 @@ const MenuPage = () => {
             <button
               className={`category-tab ${activeCategory === 'all' ? 'active' : ''}`}
               onClick={() => setActiveCategory('all')}
+              aria-pressed={activeCategory === 'all'}
             >
               Semua
             </button>
@@ -120,6 +118,7 @@ const MenuPage = () => {
                 key={cat.id}
                 className={`category-tab ${activeCategory === String(cat.id) ? 'active' : ''}`}
                 onClick={() => setActiveCategory(String(cat.id))}
+                aria-pressed={activeCategory === String(cat.id)}
               >
                 {cat.name}
               </button>
@@ -139,10 +138,11 @@ const MenuPage = () => {
                     src={`${BACKEND_URL}${menu.image}`}
                     alt={menu.name}
                     className="menu-card-img"
+                    loading="lazy"
                   />
                 ) : (
                   <div className="menu-card-img-placeholder">
-                    {getCategoryEmoji(menu.category?.name)}
+                    <span>{menu.category?.name || 'Menu Kitkop'}</span>
                   </div>
                 )}
                 <div className="menu-card-body">
@@ -153,6 +153,7 @@ const MenuPage = () => {
                     <div className="menu-card-qty-control">
                       <button
                         className="menu-qty-btn minus"
+                        aria-label={`Kurangi ${menu.name}`}
                         onClick={() => handleDecrement(menu.id)}
                       >
                         <HiMinus />
@@ -160,6 +161,7 @@ const MenuPage = () => {
                       <span className="menu-qty-value">{qty}</span>
                       <button
                         className="menu-qty-btn plus"
+                        aria-label={`Tambah ${menu.name}`}
                         onClick={() => handleIncrement(menu)}
                       >
                         <HiPlus />
@@ -181,7 +183,7 @@ const MenuPage = () => {
 
         {filteredMenus.length === 0 && (
           <div className="empty-state">
-            <span className="empty-icon">🔍</span>
+            <HiOutlineSearch className="empty-icon" aria-hidden="true" />
             <h3>Menu tidak ditemukan</h3>
             <p>Coba ubah kata kunci pencarian</p>
           </div>

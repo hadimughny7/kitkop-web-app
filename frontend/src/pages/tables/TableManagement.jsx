@@ -142,7 +142,7 @@ const TableManagement = () => {
           <h1 className="page-title">Dashboard Meja</h1>
           <p className="page-subtitle">Kelola meja dan QR Code pelanggan</p>
         </div>
-        <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <div className="page-actions">
           <button
             className="btn btn-danger"
             onClick={() => handleBulkToggle(false)}

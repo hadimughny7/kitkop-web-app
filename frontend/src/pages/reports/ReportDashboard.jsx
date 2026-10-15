@@ -62,9 +62,9 @@ const getStockDisplayStatus = (item) => {
 };
 
 const getStockLabel = (status) => {
-  if (status === 'aman') return '🟢 Aman';
-  if (status === 'menipis') return '🟡 Menipis';
-  return '🔴 Habis';
+  if (status === 'aman') return 'Aman';
+  if (status === 'menipis') return 'Menipis';
+  return 'Habis';
 };
 
 const ReportDashboard = () => {
@@ -217,7 +217,7 @@ const ReportDashboard = () => {
         </div>
         <div className="card">
           <div className="error-state">
-            <div className="error-icon">⚠️</div>
+            <HiOutlineExclamation className="error-icon" aria-hidden="true" />
             <h3>Data laporan gagal dimuat</h3>
             <p>Silakan coba lagi atau periksa koneksi Anda.</p>
             <button className="btn btn-primary" onClick={loadData}>
@@ -300,7 +300,7 @@ const ReportDashboard = () => {
       {/* ---- KPI Cards ---- */}
       <div className="kpi-grid">
         <div className="kpi-card" id="kpi-total-penjualan">
-          <div className="kpi-icon" style={{ background: 'var(--success-50)', color: 'var(--success-600)' }}>
+          <div className="kpi-icon">
             <HiOutlineCurrencyDollar />
           </div>
           <div className="kpi-info">
@@ -310,7 +310,7 @@ const ReportDashboard = () => {
         </div>
 
         <div className="kpi-card" id="kpi-total-transaksi">
-          <div className="kpi-icon" style={{ background: 'var(--primary-50)', color: 'var(--primary-600)' }}>
+          <div className="kpi-icon">
             <HiOutlineShoppingCart />
           </div>
           <div className="kpi-info">
@@ -320,7 +320,7 @@ const ReportDashboard = () => {
         </div>
 
         <div className="kpi-card" id="kpi-menu-terjual">
-          <div className="kpi-icon" style={{ background: 'var(--info-50)', color: 'var(--info-600)' }}>
+          <div className="kpi-icon">
             <HiOutlineTag />
           </div>
           <div className="kpi-info">
@@ -330,10 +330,7 @@ const ReportDashboard = () => {
         </div>
 
         <div className="kpi-card" id="kpi-stok-menipis">
-          <div className="kpi-icon" style={{
-            background: kpi.lowStockCount > 0 ? 'var(--danger-50)' : 'var(--neutral-100)',
-            color: kpi.lowStockCount > 0 ? 'var(--danger-600)' : 'var(--neutral-500)',
-          }}>
+          <div className="kpi-icon">
             <HiOutlineExclamation />
           </div>
           <div className="kpi-info">
@@ -391,7 +388,7 @@ const ReportDashboard = () => {
             </div>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">📊</div>
+              <HiOutlineShoppingCart className="empty-icon" aria-hidden="true" />
               <h3>Belum ada data penjualan</h3>
               <p>Belum ada data penjualan pada periode ini.</p>
             </div>
@@ -504,7 +501,7 @@ const ReportDashboard = () => {
             </div>
           ) : (
             <div className="empty-state">
-              <div className="empty-icon">📋</div>
+              <HiOutlineShoppingCart className="empty-icon" aria-hidden="true" />
               <h3>Belum ada data</h3>
               <p>Belum ada data penjualan pada periode ini.</p>
             </div>

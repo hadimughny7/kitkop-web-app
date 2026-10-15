@@ -140,7 +140,7 @@ const StockManagement = () => {
   if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
 
   return (
-    <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+    <div className="stock-management">
       <div className="page-header" style={{ marginBottom: 'var(--space-4)' }}>
         <div>
           <h1 className="page-title">Manajemen Stok Bahan Baku</h1>
@@ -150,7 +150,7 @@ const StockManagement = () => {
       </div>
 
       {/* Top Stat Cards */}
-      <div className="grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+      <div className="grid stock-summary-grid">
         <div className="stat-card" style={{ padding: 'var(--space-4)', display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <div className="stat-icon" style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)' }}><HiOutlineCube /></div>
           <div>
@@ -200,7 +200,7 @@ const StockManagement = () => {
       </div>
 
       {/* Main Grid: Left (Tables) & Right (Sidebars) */}
-      <div className="grid" style={{ gridTemplateColumns: '2fr 1fr', gap: 'var(--space-4)', alignItems: 'start' }}>
+      <div className="grid stock-content-grid">
         
         {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
@@ -209,15 +209,15 @@ const StockManagement = () => {
           <div className="card">
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
               <h3 style={{ fontSize: 'var(--text-lg)', margin: 0 }}>Daftar Bahan Baku</h3>
-              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+              <div className="stock-table-actions">
                 <div className="search-bar" style={{ width: '200px' }}>
-                  <HiOutlineSearch className="search-icon" />
-                  <input placeholder="Cari bahan baku..." value={searchStock} onChange={(e) => setSearchStock(e.target.value)} style={{ padding: '8px 8px 8px 32px' }} />
+                  <HiOutlineSearch className="search-icon" aria-hidden="true" />
+                  <input aria-label="Cari bahan baku" placeholder="Cari bahan baku..." value={searchStock} onChange={(e) => setSearchStock(e.target.value)} style={{ padding: '8px 8px 8px 32px' }} />
                 </div>
                 {isManager && <button className="btn btn-secondary btn-sm" onClick={() => { setEditStock(null); setStockForm({ name: '', unit: '', stock: 0, min_stock: 0 }); setShowStockModal(true); }}><HiOutlinePlus /> Tambah</button>}
               </div>
             </div>
-            <div className="card-body" style={{ padding: 0 }}>
+            <div className="card-body table-scroll" style={{ padding: 0 }} tabIndex={0} role="region" aria-label="Tabel stok dan resep">
               <table className="data-table">
                 <thead>
                   <tr style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', textTransform: 'uppercase' }}>
@@ -277,7 +277,7 @@ const StockManagement = () => {
                 <HiOutlinePlus /> Kelola Resep
               </button>}
             </div>
-            <div className="card-body" style={{ padding: 0 }}>
+            <div className="card-body table-scroll" style={{ padding: 0 }} tabIndex={0} role="region" aria-label="Tabel stok dan resep">
               <table className="data-table">
                 <thead>
                   <tr style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', textTransform: 'uppercase' }}>

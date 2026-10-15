@@ -1,7 +1,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { orderAPI } from '../../services/api';
-import { HiOutlineArrowLeft, HiOutlineTrash } from 'react-icons/hi';
+import { HiOutlineArrowLeft, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineCake, HiOutlineInformationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import { useState } from 'react';
 import './CustomerPages.css';
@@ -58,7 +58,7 @@ const CartPage = () => {
     <div className="customer-page cart-page">
       <div className="customer-container">
         <div className="cart-header">
-          <button className="back-btn" onClick={() => navigate(`/order/menu?table=${tableNum}`)}>
+          <button className="back-btn" aria-label="Kembali ke menu" onClick={() => navigate(`/order/menu?table=${tableNum}`)}>
             <HiOutlineArrowLeft />
           </button>
           <div>
@@ -71,7 +71,7 @@ const CartPage = () => {
 
         {items.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon">🛒</span>
+            <HiOutlineShoppingCart className="empty-icon" aria-hidden="true" />
             <h3>Keranjang Kosong</h3>
             <p>Tambahkan menu dari daftar menu</p>
             <button
@@ -87,25 +87,26 @@ const CartPage = () => {
             <div className="cart-items">
               {items.map((item) => (
                 <div key={item.menu_id} className="cart-item">
-                  <div className="cart-item-img-placeholder">🍽️</div>
+                  <div className="cart-item-img-placeholder"><HiOutlineCake aria-hidden="true" /></div>
                   <div className="cart-item-info">
                     <p className="cart-item-name">{item.name}</p>
                     <p className="cart-item-price">{formatCurrency(item.price)}</p>
                     <div className="qty-control">
-                      <button className="qty-btn" onClick={() => updateQty(item.menu_id, item.qty - 1)}>−</button>
+                      <button className="qty-btn" aria-label={`Kurangi ${item.name}`} onClick={() => updateQty(item.menu_id, item.qty - 1)}>−</button>
                       <span className="qty-value">{item.qty}</span>
-                      <button className="qty-btn" onClick={() => updateQty(item.menu_id, item.qty + 1)}>+</button>
+                      <button className="qty-btn" aria-label={`Tambah ${item.name}`} onClick={() => updateQty(item.menu_id, item.qty + 1)}>+</button>
                     </div>
                     <div className="cart-item-notes">
                       <input
                         type="text"
                         placeholder="Catatan (opsional)"
+                        aria-label={`Catatan untuk ${item.name}`}
                         value={item.notes}
                         onChange={(e) => updateNotes(item.menu_id, e.target.value)}
                       />
                     </div>
                   </div>
-                  <button className="cart-item-remove" onClick={() => removeItem(item.menu_id)}>
+                  <button className="cart-item-remove" aria-label={`Hapus ${item.name}`} onClick={() => removeItem(item.menu_id)}>
                     <HiOutlineTrash />
                   </button>
                 </div>
@@ -136,7 +137,7 @@ const CartPage = () => {
                 padding: '8px 12px', marginTop: 'var(--space-2)',
                 fontSize: '11px', color: '#1e40af', lineHeight: 1.4,
               }}>
-                ℹ️ Pembayaran via QR Order hanya bisa menggunakan <strong>QRIS</strong>. Untuk bayar <strong>cash</strong>, silakan pesan langsung ke kasir.
+                <HiOutlineInformationCircle aria-hidden="true" style={{ verticalAlign: 'middle', marginRight: 4 }} /> Pembayaran via QR Order hanya bisa menggunakan <strong>QRIS</strong>. Untuk bayar <strong>cash</strong>, silakan pesan langsung ke kasir.
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: 'var(--space-3)' }}>
                 <button

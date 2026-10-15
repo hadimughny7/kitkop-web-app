@@ -1,6 +1,6 @@
 .main-dashboard .stats-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
   margin-bottom: var(--space-6);
 }
@@ -12,7 +12,8 @@
 }
 
 .welcome-emoji {
-  font-size: 3rem;
+  font-size: 1.75rem;
+  color: var(--primary-600);
   flex-shrink: 0;
 }
 
@@ -37,4 +38,56 @@
   .main-dashboard .stats-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.main-dashboard .stat-card { flex-direction: column; gap: 24px; box-shadow: none; padding: 24px; }
+.main-dashboard .stat-icon { width: 36px; height: 36px; font-size: 20px; }
+.main-dashboard .stat-value { font-size: clamp(22px, 2.2vw, 30px); letter-spacing: -0.045em; overflow-wrap: anywhere; line-height: 1.2; }
+.main-dashboard .stat-label { margin-top: 8px; font-size: 13px; }
+.dashboard-welcome-card { background: var(--primary-50); box-shadow: none; }
+.dashboard-welcome-card h2 { font-size: 16px; font-weight: 600; }
+.dashboard-welcome-card p { max-width: 650px; }
+@media (max-width: 640px) {
+  .main-dashboard .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .main-dashboard .stat-card { padding: 16px; gap: 20px; }
+  .main-dashboard .stat-value { font-size: 22px; }
+  .dashboard-welcome-card .welcome-content { gap: 16px; align-items: flex-start; }
+}
+@media (max-width: 360px) { .main-dashboard .stats-grid { grid-template-columns: 1fr; } }
+
+.dashboard-brand-banner { display: flex; justify-content: space-between; align-items: center; gap: 32px; padding: 32px 40px; margin-bottom: 24px; border-radius: 16px; color: white; background-color: #111; background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px); background-size: 32px 32px; overflow: hidden; }
+.banner-eyebrow { font-size: 9px; letter-spacing: 0.14em; font-weight: 600; color: #bbb; margin-bottom: 18px; }
+.dashboard-brand-banner h2 { font-family: var(--font-display); font-size: clamp(32px, 3.2vw, 44px); color: white; line-height: 1.08; font-weight: 700; letter-spacing: -0.045em; }
+.dashboard-brand-banner h2 br { display: none; }
+.dashboard-brand-banner h2 span { color: #aaa; }
+.dashboard-brand-banner h2 + p { font-size: 12px; color: #bbb; margin-top: 14px; }
+.dashboard-brand-mark { background: white; color: black; display: flex; align-items: center; gap: 12px; padding: 12px 16px; border: 1px solid #111; border-radius: 10px; transform: rotate(4deg); box-shadow: 5px 5px 0 #000; flex-shrink: 0; }
+.dashboard-brand-mark img { width: 64px; height: 64px; object-fit: contain; }
+.dashboard-brand-mark span { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: -0.04em; line-height: 1.1; }
+.dashboard-brand-mark svg { transform: rotate(-35deg); margin-left: 8px; font-size: 20px; }
+.main-dashboard .stat-card { border-radius: 12px; gap: 20px; }
+.main-dashboard .stat-card .stat-icon { background: #f3f3f3 !important; color: #333 !important; border-radius: 8px; }
+.main-dashboard .stat-value { font-family: var(--font-display); font-weight: 600; font-size: clamp(24px, 2.4vw, 34px); letter-spacing: -0.055em; }
+.main-dashboard .stat-label { font-size: 12px; }
+.dashboard-welcome-card { border: 0; background: transparent; border-top: 1px solid var(--neutral-200); border-radius: 0; }
+.dashboard-welcome-card .card-body { padding: 24px 0; }
+.dashboard-welcome-card h2 { font-size: 14px; }
+.dashboard-welcome-card p { font-size: 12px; }
+@media (max-width: 1100px) { .dashboard-brand-banner h2 br { display: block; } }
+@media (max-width: 640px) {
+  .dashboard-brand-banner { padding: 24px; gap: 16px; align-items: flex-start; }
+  .dashboard-brand-banner h2 { font-size: 32px; }
+  .dashboard-brand-mark { padding: 8px; margin-top: 8px; }
+  .dashboard-brand-mark img { width: 48px; height: 48px; }
+  .dashboard-brand-mark span, .dashboard-brand-mark svg { display: none; }
+  .dashboard-brand-banner h2 + p { max-width: 190px; }
+  .main-dashboard .stat-value { font-size: 24px; }
+}
+
+@media (max-width: 640px) {
+  .main-dashboard .stats-grid { grid-template-columns: minmax(0, 1fr); gap: 0; border: 1px solid var(--neutral-200); border-radius: 12px; overflow: hidden; background: white; }
+  .main-dashboard .stat-card { flex-direction: row; align-items: center; border: 0; border-bottom: 1px solid var(--neutral-200); border-radius: 0; padding: 18px 20px; gap: 16px; }
+  .main-dashboard .stat-card:last-child { border-bottom: 0; }
+  .main-dashboard .stat-value { font-size: 26px; line-height: 1.2; }
+  .main-dashboard .stat-label { margin-top: 4px; }
 }

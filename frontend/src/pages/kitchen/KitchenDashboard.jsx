@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { orderAPI, BACKEND_URL } from '../../services/api';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
-import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlineRefresh, HiCheck, HiVolumeOff } from 'react-icons/hi';
+import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlineRefresh, HiCheck, HiVolumeOff, HiOutlineInbox } from 'react-icons/hi';
 import { startNotificationAlert, stopNotificationAlert, isAlertRinging, initAudioContext } from '../../utils/notificationSound';
 import './StationDashboard.css';
 
@@ -118,10 +118,10 @@ const KitchenDashboard = () => {
 
   // Get item status info
   const getItemStatusInfo = (item) => {
-    if (item.status === 'completed') return { label: 'Selesai', className: 'item-completed', icon: '✅' };
-    if (item.status === 'preparing') return { label: 'Diproses', className: 'item-preparing', icon: '🔥' };
-    if (item.status === 'rejected') return { label: 'Ditolak', className: 'item-rejected', icon: '❌' };
-    return { label: 'Menunggu', className: 'item-pending', icon: '⏳' };
+    if (item.status === 'completed') return { label: 'Selesai', className: 'item-completed', icon: <HiOutlineCheck aria-hidden="true" /> };
+    if (item.status === 'preparing') return { label: 'Diproses', className: 'item-preparing', icon: <HiOutlineRefresh aria-hidden="true" /> };
+    if (item.status === 'rejected') return { label: 'Ditolak', className: 'item-rejected', icon: <HiOutlineX aria-hidden="true" /> };
+    return { label: 'Menunggu', className: 'item-pending', icon: <HiOutlineClock aria-hidden="true" /> };
   };
 
   // Count item statuses in an order
@@ -142,7 +142,7 @@ const KitchenDashboard = () => {
     <div className="station-dashboard">
       <div className="station-header">
         <div>
-          <h1 className="page-title">🍳 Kitchen Dashboard</h1>
+          <h1 className="page-title">Dapur & Barista</h1>
           <p className="page-subtitle">Kelola pesanan makanan & snack</p>
         </div>
         <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
@@ -175,8 +175,8 @@ const KitchenDashboard = () => {
             className={`tab ${activeTab === tab ? 'active' : ''}`}
             onClick={() => setActiveTab(tab)}
           >
-            {tab === 'confirmed' ? '📥 Masuk' :
-             tab === 'preparing' ? '🔥 Diproses' : ''}
+            {tab === 'confirmed' ? 'Masuk' :
+             tab === 'preparing' ? 'Diproses' : ''}
           </button>
         ))}
       </div>
@@ -184,7 +184,7 @@ const KitchenDashboard = () => {
       <div className="order-cards-grid">
         {filteredOrders.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon">📭</span>
+          <HiOutlineInbox className="empty-icon" aria-hidden="true" />
             <h3>Tidak ada pesanan</h3>
           </div>
         ) : (
@@ -235,7 +235,7 @@ const KitchenDashboard = () => {
                                     onClick={() => handleItemStatus(order.id, item.id, 'preparing')}
                                     title="Proses item ini"
                                   >
-                                    🔥 Proses
+                            Proses
                                   </button>
                               )}
                               {item.status === 'preparing' && (
@@ -249,7 +249,7 @@ const KitchenDashboard = () => {
                               )}
                             </div>
                           </div>
-                          {item.notes && <span className="item-notes">📝 {item.notes}</span>}
+                      {item.notes && <span className="item-notes">Catatan: {item.notes}</span>}
                         </li>
                       );
                     })}
@@ -260,7 +260,7 @@ const KitchenDashboard = () => {
                   {/* Bulk actions */}
                   {order.status === 'confirmed' && (
                     <button className="btn btn-primary btn-sm" onClick={() => handleProcessAll(order.id)}>
-                      🔥 Proses Semua
+                        Proses Semua
                     </button>
                   )}
                   {order.status === 'preparing' && (

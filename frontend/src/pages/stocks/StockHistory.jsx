@@ -121,17 +121,17 @@ const StockHistory = () => {
   const getTypeBadge = (type) => {
     switch (type) {
       case 'auto_deduction':
-        return { label: 'Pengurangan', className: 'deduction', icon: '📉' };
+        return { label: 'Pengurangan', className: 'deduction', icon: <HiOutlineTrendingDown aria-hidden="true" /> };
       case 'restock':
-        return { label: 'Restock', className: 'restock', icon: '📦' };
+        return { label: 'Restock', className: 'restock', icon: <HiOutlineCube aria-hidden="true" /> };
       case 'manual_reduction':
-        return { label: 'Pengurangan Manual', className: 'deduction', icon: '🗑️' };
+        return { label: 'Pengurangan Manual', className: 'deduction', icon: <HiOutlineTrendingDown aria-hidden="true" /> };
       case 'refund':
-        return { label: 'Refund', className: 'refund', icon: '🔄' };
+        return { label: 'Refund', className: 'refund', icon: <HiOutlineRefresh aria-hidden="true" /> };
       case 'manual_adjustment':
-        return { label: 'Manual', className: 'manual', icon: '✏️' };
+        return { label: 'Manual', className: 'manual', icon: <HiOutlineClipboardList aria-hidden="true" /> };
       default:
-        return { label: type, className: '', icon: '📋' };
+        return { label: type, className: '', icon: <HiOutlineClipboardList aria-hidden="true" /> };
     }
   };
 
@@ -180,7 +180,7 @@ const StockHistory = () => {
     <div>
       <div className="page-header">
         <div>
-          <h1 className="page-title">📊 Riwayat Perubahan Stok</h1>
+          <h1 className="page-title">Riwayat Perubahan Stok</h1>
           <p className="page-subtitle">
             Lihat riwayat perubahan stok bahan baku berdasarkan pesanan per hari
           </p>
@@ -298,10 +298,10 @@ const StockHistory = () => {
       {/* Filter Tabs */}
       <div className="sh-filter-tabs">
         {[
-          { key: 'all', label: '📋 Semua' },
-          { key: 'auto_deduction', label: '📉 Pengurangan' },
-          { key: 'restock', label: '📦 Restock' },
-          { key: 'manual_reduction', label: '🗑️ Pengurangan Manual' },
+          { key: 'all', label: 'Semua' },
+          { key: 'auto_deduction', label: 'Pengurangan' },
+          { key: 'restock', label: 'Restock' },
+          { key: 'manual_reduction', label: 'Pengurangan Manual' },
         ].map((tab) => (
           <button
             key={tab.key}
@@ -316,7 +316,7 @@ const StockHistory = () => {
       {/* Order Groups */}
       {data?.byOrder?.length === 0 && data?.nonOrderLogs?.length === 0 ? (
         <div className="sh-empty">
-          <span className="empty-icon">📭</span>
+          <HiOutlineClipboardList className="empty-icon" aria-hidden="true" />
           <h3>Tidak ada riwayat perubahan stok</h3>
           <p>Belum ada perubahan stok pada tanggal {formatDate(selectedDate)}</p>
         </div>
@@ -430,7 +430,7 @@ const StockHistory = () => {
           {data?.nonOrderLogs?.length > 0 && (
             <div className="sh-non-order-section">
               <h3>
-                🔧 Perubahan Manual (Tanpa Pesanan)
+                Perubahan Manual (Tanpa Pesanan)
               </h3>
               <div className="sh-order-group">
                 <table className="sh-items-table">

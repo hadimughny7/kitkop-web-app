@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { reportAPI } from '../../services/api';
-import { HiOutlineShoppingCart, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineExclamation, HiOutlineCash } from 'react-icons/hi';
+import { HiOutlineShoppingCart, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineExclamation, HiOutlineCash, HiOutlineArrowRight } from 'react-icons/hi';
 import './MainDashboard.css';
 
 const MainDashboard = () => {
@@ -46,6 +46,11 @@ const MainDashboard = () => {
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Ringkasan operasional hari ini</p>
         </div>
+      </div>
+
+      <div className="dashboard-brand-banner">
+        <div><p className="banner-eyebrow">KITKOP.ID / DAILY OVERVIEW</p><h2>Hari baru.{' '}<br /><span>Cerita baru.</span></h2><p>Semua aktivitas kedai, dalam satu pandangan.</p></div>
+        <div className="dashboard-brand-mark" aria-hidden="true"><img src="/logo-kitkop.png" alt="" width="100" height="100" /><span>PLACE FOR<br />EVERYONE.</span><HiOutlineArrowRight /></div>
       </div>
 
       <div className="stats-grid">
@@ -113,9 +118,9 @@ const MainDashboard = () => {
       <div className="dashboard-welcome-card card">
         <div className="card-body">
           <div className="welcome-content">
-            <span className="welcome-emoji">☕</span>
+            <HiOutlineArrowRight className="welcome-emoji" aria-hidden="true" />
             <div>
-              <h2>Selamat Datang di Kitkop.id</h2>
+              <h2>Ruang kerja kedai Anda.</h2>
               <p>Gunakan menu di samping untuk mengelola pesanan, stok bahan baku, dan laporan. Semua data disinkronkan secara real-time.</p>
             </div>
           </div>

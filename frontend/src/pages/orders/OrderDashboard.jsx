@@ -224,8 +224,8 @@ const OrderDashboard = () => {
             </select>
             <select className="form-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
               <option value="all">Semua Tipe</option>
-              <option value="qr">📱 QR</option>
-              <option value="kasir">🏪 Kasir</option>
+              <option value="qr">QR</option>
+              <option value="kasir">Kasir</option>
             </select>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <input
@@ -258,7 +258,7 @@ const OrderDashboard = () => {
             </div>
           </div>
         </div>
-        <div className="card-body" style={{ padding: 0 }}>
+        <div className="card-body table-scroll" style={{ padding: 0 }} tabIndex={0} role="region" aria-label="Daftar pesanan">
           <table className="data-table">
             <thead>
               <tr>
@@ -285,7 +285,7 @@ const OrderDashboard = () => {
                   <td>{o.table?.table_number || '-'}</td>
                   <td>
                     <span className={`badge ${o.order_type === 'kasir' ? 'badge-primary' : 'badge-info'}`}>
-                      {o.order_type === 'kasir' ? '🏪 Kasir' : '📱 QR'}
+                      {o.order_type === 'kasir' ? 'Kasir' : 'QR'}
                     </span>
                   </td>
                   <td>{o.cashier?.name || '-'}</td>
@@ -396,7 +396,7 @@ const OrderDashboard = () => {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <span className={`badge ${statusColors[detailOrder.status]}`}>{statusLabels[detailOrder.status]}</span>
-                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--neutral-500)', marginTop: '4px' }}>{detailOrder.order_type === 'kasir' ? '🏪 Kasir' : '📱 QR'}</p>
+                  <p style={{ fontSize: 'var(--text-sm)', color: 'var(--neutral-500)', marginTop: '4px' }}>{detailOrder.order_type === 'kasir' ? 'Kasir' : 'QR'}</p>
                 </div>
               </div>
 
@@ -432,7 +432,7 @@ const OrderDashboard = () => {
                       <div>
                         <p style={{ fontWeight: 500 }}>{item.menu?.name || `Item #${item.menu_id}`}</p>
                         <p style={{ fontSize: '12px', color: 'var(--neutral-500)' }}>{item.qty} × {formatCurrency(item.price)}</p>
-                        {item.notes && <p style={{ fontSize: '12px', color: 'var(--warning-600)', marginTop: '2px' }}>📝 {item.notes}</p>}
+                        {item.notes && <p style={{ fontSize: '12px', color: 'var(--warning-600)', marginTop: '2px' }}>Catatan: {item.notes}</p>}
                       </div>
                       <span style={{ fontWeight: 600 }}>{formatCurrency(item.qty * parseFloat(item.price))}</span>
                     </div>
@@ -465,9 +465,9 @@ const OrderDashboard = () => {
               {/* Payment status */}
               <div style={{ textAlign: 'center', marginTop: 'var(--space-3)' }}>
                 {detailOrder.transaction?.status === 'paid' ? (
-                  <span className="badge badge-success" style={{ fontSize: 'var(--text-sm)', padding: '6px 16px' }}>✅ Lunas — {detailOrder.transaction.payment_method}</span>
+                  <span className="badge badge-success" style={{ fontSize: 'var(--text-sm)', padding: '6px 16px' }}>Lunas — {detailOrder.transaction.payment_method}</span>
                 ) : (
-                  <span className="badge badge-warning" style={{ fontSize: 'var(--text-sm)', padding: '6px 16px' }}>⏳ Belum Dibayar</span>
+                  <span className="badge badge-warning" style={{ fontSize: 'var(--text-sm)', padding: '6px 16px' }}>Belum Dibayar</span>
                 )}
               </div>
             </div>

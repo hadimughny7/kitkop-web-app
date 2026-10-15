@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
-import { HiCheck, HiOutlineClock, HiOutlineRefresh } from 'react-icons/hi';
+import { HiCheck, HiOutlineClock, HiOutlineRefresh, HiOutlineX, HiOutlineExclamation } from 'react-icons/hi';
 import { useCart } from '../../context/CartContext';
 import io from 'socket.io-client';
 import toast from 'react-hot-toast';
@@ -198,10 +198,10 @@ const OrderStatusPage = () => {
 
   // === Item status icon ===
   const getItemIcon = (item) => {
-    if (item.status === 'completed') return '✅';
-    if (item.status === 'preparing') return '🔥';
-    if (item.status === 'rejected') return '❌';
-    return '⏳';
+    if (item.status === 'completed') return <HiCheck aria-label="Selesai" />;
+    if (item.status === 'preparing') return <HiOutlineRefresh aria-label="Diproses" />;
+    if (item.status === 'rejected') return <HiOutlineX aria-label="Ditolak" />;
+    return <HiOutlineClock aria-label="Menunggu" />;
   };
 
   if (loading) {
@@ -220,7 +220,7 @@ const OrderStatusPage = () => {
       <div className="customer-page">
         <div className="customer-container">
           <div className="error-card">
-            <span className="error-icon">😔</span>
+            <HiOutlineExclamation className="error-icon" aria-hidden="true" />
             <h2>Pesanan Tidak Ditemukan</h2>
           </div>
         </div>
@@ -243,7 +243,7 @@ const OrderStatusPage = () => {
         <div className="status-card">
           <div className="status-header">
             <span style={{ fontSize: '2.5rem', display: 'block', marginBottom: 'var(--space-3)' }}>
-              {order.status === 'completed' ? '🎉' : order.status === 'cancelled' ? '❌' : '⏳'}
+              {order.status === 'completed' ? <HiCheck aria-hidden="true" /> : order.status === 'cancelled' ? <HiOutlineX aria-hidden="true" /> : <HiOutlineClock aria-hidden="true" />}
             </span>
             <h1>
               {order.status === 'completed' ? 'Pesanan Selesai!' :
@@ -291,7 +291,7 @@ const OrderStatusPage = () => {
                     />
                   ) : isFallbackMock ? (
                     <div style={{ width: 200, padding: 'var(--space-4)', background: '#fee2e2', borderRadius: '8px', color: '#b91c1c', textAlign: 'left' }}>
-                      <p style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>❌ KuyzPay Error</p>
+                <p style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>KuyzPay Error</p>
                       <p style={{ fontSize: '12px' }}>Gagal membuat QRIS. Silakan coba lagi atau hubungi admin.</p>
                     </div>
                   ) : (

@@ -96,7 +96,7 @@
 
 .report-dashboard .kpi-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .report-dashboard .kpi-icon {
@@ -189,15 +189,15 @@
 }
 
 .report-dashboard .top-menu-rank.rank-1 {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  background: #fbbf24;
   color: white;
 }
 .report-dashboard .top-menu-rank.rank-2 {
-  background: linear-gradient(135deg, #d1d5db, #9ca3af);
+  background: #d1d5db;
   color: white;
 }
 .report-dashboard .top-menu-rank.rank-3 {
-  background: linear-gradient(135deg, #d97706, #b45309);
+  background: #d97706;
   color: white;
 }
 .report-dashboard .top-menu-rank.rank-other {
@@ -329,7 +329,7 @@
 
 /* Skeleton Loading */
 .report-dashboard .skeleton {
-  background: linear-gradient(90deg, var(--neutral-100) 25%, var(--neutral-200) 50%, var(--neutral-100) 75%);
+  background: var(--neutral-100);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-md);
@@ -380,14 +380,15 @@
 
 /* Export button glow on hover */
 .report-dashboard .btn-export {
-  background: linear-gradient(135deg, #059669, #047857);
+  background: var(--primary-500);
   color: white;
   box-shadow: 0 2px 8px rgba(5, 150, 105, 0.3);
 }
 
 .report-dashboard .btn-export:hover {
+  background: #333;
   box-shadow: 0 4px 16px rgba(5, 150, 105, 0.4);
-  transform: translateY(-1px);
+  transform: none;
 }
 
 .report-dashboard .btn-export:disabled {
@@ -459,3 +460,21 @@
     font-size: 1.1rem;
   }
 }
+
+.report-dashboard .kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.report-dashboard .kpi-card { flex-direction: column; gap: 20px; box-shadow: none; border-color: var(--neutral-200); padding: 20px; }
+.report-dashboard .kpi-card::after { display: none; }
+.report-dashboard .kpi-value { white-space: normal; overflow-wrap: anywhere; font-size: clamp(20px, 1.8vw, 28px); line-height: 1.2; letter-spacing: -0.04em; }
+.report-dashboard .kpi-icon { width: 36px; height: 36px; font-size: 20px; }
+.report-dashboard .period-pills { max-width: 100%; overflow-x: auto; }
+.report-dashboard .period-pill { min-height: 40px; }
+.report-dashboard .custom-dates { flex-wrap: wrap; min-width: 0; }
+.report-dashboard .btn-export, .report-dashboard .btn-export:hover { box-shadow: none; }
+@media (max-width: 1100px) { .report-dashboard .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) {
+  .report-dashboard .kpi-card { padding: 16px; }
+  .report-dashboard .period-pill { padding-inline: 12px; }
+  .report-dashboard .two-col { grid-template-columns: minmax(0, 1fr); }
+}
+
+.report-dashboard .kpi-icon { background: var(--neutral-100); color: var(--neutral-700); }

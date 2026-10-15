@@ -184,7 +184,7 @@ const MenuManagement = () => {
                     {m.image ? (
                       <img src={`${BACKEND_URL}${m.image}`} alt={m.name} style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', objectFit: 'cover' }} />
                     ) : (
-                      <div style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🍽️</div>
+                      <div style={{ width: 48, height: 48, borderRadius: 'var(--radius-md)', background: 'var(--neutral-100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}><HiOutlineTag aria-hidden="true" /></div>
                     )}
                   </td>
                   <td>

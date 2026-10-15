@@ -24,7 +24,7 @@
 
 .order-stat-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: none;
 }
 
 .order-stat-icon {
@@ -96,7 +96,7 @@
 
 .order-search-wrapper input:focus {
   border-color: var(--primary-400);
-  box-shadow: 0 0 0 3px rgba(201, 125, 31, 0.1);
+  box-shadow: none;
 }
 
 .order-search-wrapper input::placeholder {
@@ -344,4 +344,14 @@
   .no-print {
     display: none !important;
   }
+}
+
+.order-stat-card { box-shadow: none; border-color: var(--neutral-200); }
+.order-stat-card:hover { box-shadow: none; }
+@media (max-width: 640px) {
+  .order-stats-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .order-stat-card { flex-direction: column; align-items: flex-start; gap: 16px; padding: 16px; }
+  .order-stat-icon { width: 36px; height: 36px; font-size: 20px; }
+  .order-filters { width: 100%; }
+  .order-filters .search-bar { width: 100%; }
 }
