@@ -19,7 +19,7 @@ const statusSteps = [
 const OrderStatusPage = () => {
   const { orderNumber } = useParams();
   const navigate = useNavigate();
-  const { tableNumber, clearCart } = useCart();
+  const { tableNumber, clearCart, setTableNumber, setTableId, setCustomerInfo } = useCart();
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -232,6 +232,20 @@ const OrderStatusPage = () => {
 
   const estimatedMinutes = getEstimatedMinutes();
   const progress = getItemProgress();
+  // Cart context resets on refresh; the tracked order retains its original table.
+  const orderTableNumber = order.table?.table_number || tableNumber;
+  const handleOrderAgain = () => {
+    clearCart();
+    setTableNumber(orderTableNumber);
+    setTableId(order.table_id || null);
+    setCustomerInfo({
+      name: order.customer?.name || '',
+      phone: order.customer?.phone || '',
+      email: order.customer?.email || '',
+    });
+    const destination = order.table_id && order.customer?.name ? 'menu' : 'welcome';
+    navigate(`/order/${destination}?table=${encodeURIComponent(orderTableNumber)}`);
+  };
 
   // Determine QR source: use qr_url from KuyzPay, fallback to qris_content
   const qrImageUrl = payment?.qr_url || payment?.qris_content || null;
@@ -400,12 +414,12 @@ const OrderStatusPage = () => {
             </div>
 
             {/* Pesan Lagi Button — show when order is not pending */}
-            {order.status !== 'pending' && order.status !== 'cancelled' && tableNumber && (
+            {order.status !== 'pending' && order.status !== 'cancelled' && orderTableNumber && (
               <div style={{ marginTop: 'var(--space-4)', textAlign: 'center' }}>
                 <button
                   className="btn btn-primary btn-lg"
                   style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)' }}
-                  onClick={() => { clearCart(); navigate(`/order/menu?table=${tableNumber}`); }}
+                  onClick={handleOrderAgain}
                 >
                   <HiOutlineRefresh /> Pesan Lagi
                 </button>

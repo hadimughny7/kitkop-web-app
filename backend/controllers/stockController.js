@@ -1,6 +1,7 @@
 const { RawMaterial, MenuRecipe, StockLog, Menu, Order, Customer, Table, User, OrderItem, OptionGroup, OptionTemplate } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { stockUsageQuantity } = require('../services/recipeQuantities');
 
 /**
  * GET /api/stocks
@@ -299,6 +300,8 @@ const applyItemStock = async (orderId, itemId, transaction, refund = false) => {
   // Legacy items have no snapshot; retain their existing recipe-based refund behavior.
   if (refund && item.stock_usage !== null && !item.stock_deducted) return;
   const recipes = item.stock_usage ?? await MenuRecipe.findAll({ where: { menu_id: item.menu_id }, transaction });
+  // Validate persisted snapshots and legacy recipes before any stock writes.
+  for (const recipe of recipes) stockUsageQuantity(recipe.quantity_used);
   for (const recipe of [...recipes].sort((a, b) => a.raw_material_id - b.raw_material_id)) {
     const material = await RawMaterial.findByPk(recipe.raw_material_id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!material) throw new Error('Bahan resep pesanan tidak ditemukan.');

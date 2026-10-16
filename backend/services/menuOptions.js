@@ -1,3 +1,4 @@
+const { recipeQuantity } = require('./recipeQuantities');
 const fail = (message, statusCode = 400) => { throw Object.assign(new Error(message), { statusCode }); };
 const money = (value) => Math.round(Number(value) * 100);
 
@@ -19,7 +20,8 @@ function validateGroup(input) {
     if (!Array.isArray(ingredients) || ingredients.length > 30) fail('Resep tambahan tidak valid.');
     const materials = new Set();
     ingredients.forEach((ingredient) => {
-      if (!Number.isInteger(Number(ingredient.raw_material_id)) || Number(ingredient.raw_material_id) < 1 || materials.has(Number(ingredient.raw_material_id)) || !Number.isFinite(Number(ingredient.quantity_used)) || Number(ingredient.quantity_used) < 0.01 || Number(ingredient.quantity_used) > 1000000) fail('Bahan tambahan atau jumlah pemakaiannya tidak valid.');
+      const quantity = recipeQuantity(ingredient.quantity_used);
+      if (!Number.isInteger(Number(ingredient.raw_material_id)) || Number(ingredient.raw_material_id) < 1 || materials.has(Number(ingredient.raw_material_id)) || quantity > 1000000) fail('Bahan tambahan atau jumlah pemakaiannya tidak valid.');
       materials.add(Number(ingredient.raw_material_id));
     });
     return { id: choice.id, name: choice.name.trim(), price: money(choice.price) / 100,
@@ -55,7 +57,8 @@ function buildStockUsage(recipes, selections) {
   const usage = new Map();
   for (const ingredient of [...recipes, ...selections.flatMap((s) => s.ingredients || [])]) {
     const id = Number(ingredient.raw_material_id);
-    usage.set(id, (usage.get(id) || 0) + Number(ingredient.quantity_used));
+    // Validate before merging: a negative ingredient must not cancel a positive one.
+    usage.set(id, (usage.get(id) || 0) + recipeQuantity(ingredient.quantity_used, 409));
   }
   return [...usage].map(([raw_material_id, quantity_used]) => ({ raw_material_id, quantity_used: Math.round(quantity_used * 100) / 100 }));
 }

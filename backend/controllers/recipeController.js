@@ -1,4 +1,5 @@
 const { MenuRecipe, Menu, RawMaterial } = require('../models');
+const { recipeQuantity } = require('../services/recipeQuantities');
 
 /**
  * GET /api/recipes
@@ -31,11 +32,11 @@ const getRecipes = async (req, res, next) => {
 const createRecipe = async (req, res, next) => {
   try {
     const { menu_id, raw_material_id, quantity_used } = req.body;
-    if (!menu_id || !raw_material_id || !quantity_used) {
+    if (!menu_id || !raw_material_id) {
       return res.status(400).json({ success: false, message: 'menu_id, raw_material_id, dan quantity_used wajib diisi.' });
     }
 
-    const recipe = await MenuRecipe.create({ menu_id, raw_material_id, quantity_used });
+    const recipe = await MenuRecipe.create({ menu_id, raw_material_id, quantity_used: recipeQuantity(quantity_used) });
     const fullRecipe = await MenuRecipe.findByPk(recipe.id, {
       include: [
         { model: Menu, as: 'menu', attributes: ['id', 'name'] },
@@ -59,7 +60,7 @@ const updateRecipe = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Resep tidak ditemukan.' });
     }
     const { quantity_used } = req.body;
-    if (quantity_used) recipe.quantity_used = quantity_used;
+    recipe.quantity_used = recipeQuantity(quantity_used);
     await recipe.save();
     res.json({ success: true, message: 'Resep berhasil diperbarui.', data: recipe });
   } catch (error) {

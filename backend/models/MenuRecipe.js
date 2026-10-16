@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { recipeQuantity } = require('../services/recipeQuantities');
 
 const MenuRecipe = sequelize.define('MenuRecipe', {
   id: {
@@ -20,6 +21,9 @@ const MenuRecipe = sequelize.define('MenuRecipe', {
   quantity_used: {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
+    validate: {
+      positiveQuantity(value) { recipeQuantity(value); },
+    },
   },
 }, {
   tableName: 'menu_recipes',
