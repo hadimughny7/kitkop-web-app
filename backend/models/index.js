@@ -10,6 +10,7 @@ const OrderCounter = require('./OrderCounter');
 const OrderItem = require('./OrderItem');
 const OrderStatusLog = require('./OrderStatusLog');
 const Transaction = require('./Transaction');
+const QrisAttempt = require('./QrisAttempt');
 const StockLog = require('./StockLog');
 const Setting = require('./Setting');
 const OptionGroup = require('./OptionGroup');
@@ -86,6 +87,7 @@ module.exports = {
   OrderItem,
   OrderStatusLog,
   Transaction,
+  QrisAttempt,
   StockLog,
   Setting,
   OptionGroup,

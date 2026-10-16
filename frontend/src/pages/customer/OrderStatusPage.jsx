@@ -8,6 +8,7 @@ import { useCart } from '../../context/CartContext';
 import { createOrderSocket } from '../../services/socket';
 import { getOrderTrackingToken } from '../../services/orderTracking';
 import toast from 'react-hot-toast';
+import { QRCodeSVG } from 'qrcode.react';
 import './CustomerPages.css';
 
 const statusSteps = [
@@ -23,6 +24,8 @@ const OrderStatusPage = () => {
   const { tableNumber, clearCart, setTableNumber, setTableId, setCustomerInfo } = useCart();
   const [order, setOrder] = useState(null);
   const [payment, setPayment] = useState(null);
+  const [paymentError, setPaymentError] = useState('');
+  const [paymentLoading, setPaymentLoading] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [timeLeft, setTimeLeft] = useState(null);
@@ -115,13 +118,15 @@ const OrderStatusPage = () => {
 
   const checkingPayment = useRef(false);
 
-  const checkOrCreatePayment = async () => {
+  const checkOrCreatePayment = async (retry = false) => {
     if (!order) return;
     if (checkingPayment.current) return;
     checkingPayment.current = true;
+    setPaymentLoading(true);
     try {
-      const res = await paymentAPI.getStatus(order.id);
+      const res = retry ? await paymentAPI.createQris({ order_id: order.id }) : await paymentAPI.getStatus(order.id);
       setPayment(res.data.data);
+      setPaymentError('');
 
       // If status check reveals payment was already made, reload order
       if (res.data.data.status === 'paid') {
@@ -132,12 +137,16 @@ const OrderStatusPage = () => {
         try {
           const createRes = await paymentAPI.createQris({ order_id: order.id });
           setPayment(createRes.data.data);
+          setPaymentError('');
         } catch (createErr) {
-          console.error('Failed to create QRIS:', createErr);
+          setPaymentError(createErr.response?.data?.message || 'QRIS belum dapat dibuat. Silakan coba lagi.');
         }
+      } else {
+        setPaymentError(err.response?.data?.message || 'QRIS belum dapat dimuat. Silakan coba lagi.');
       }
     } finally {
       checkingPayment.current = false;
+      setPaymentLoading(false);
     }
   };
 
@@ -241,7 +250,9 @@ const OrderStatusPage = () => {
   // Determine QR source: use qr_url from KuyzPay, fallback to qris_content
   const qrImageUrl = payment?.qr_url || payment?.qris_content || null;
   const isKuyzPayQr = qrImageUrl && !qrImageUrl.startsWith('mock-') && qrImageUrl.startsWith('http');
-  const isFallbackMock = payment?.qris_content?.startsWith('mock-');
+  const rawQr = payment?.qr_string || (qrImageUrl?.startsWith('000201') ? qrImageUrl : null);
+  const unavailable = paymentError || ['mock', 'failed', 'unknown', 'expired'].includes(payment?.qris_state) || payment?.qris_content?.startsWith('mock-');
+  const canRetry = payment?.can_retry !== false && timeLeft !== 0;
   const payUrl = payment?.pay_url || null;
 
   return (
@@ -288,7 +299,7 @@ const OrderStatusPage = () => {
                     Batas waktu: {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{(timeLeft % 60).toString().padStart(2, '0')}
                   </div>
                 )}
-                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--neutral-500)', marginBottom: 'var(--space-4)' }}>Scan QRIS di bawah ini untuk membayar pesanan Anda sejumlah <strong>{formatCurrency(order.total)}</strong></p>
+                <p style={{ fontSize: 'var(--text-sm)', color: 'var(--neutral-500)', marginBottom: 'var(--space-4)' }}>Scan QRIS di bawah ini untuk membayar pesanan Anda sejumlah <strong>{formatCurrency(payment?.total_bayar || payment?.amount || order.total)}</strong></p>
                 <div style={{ background: '#fff', padding: '16px', display: 'inline-block', borderRadius: '12px', border: '1px solid var(--neutral-200)', marginBottom: 'var(--space-4)' }}>
                   {isKuyzPayQr ? (
                     <img
@@ -296,10 +307,13 @@ const OrderStatusPage = () => {
                       alt="QRIS Payment QR Code"
                       style={{ width: 220, height: 220, objectFit: 'contain' }}
                     />
-                  ) : isFallbackMock ? (
-                    <div style={{ width: 200, padding: 'var(--space-4)', background: '#fee2e2', borderRadius: '8px', color: '#b91c1c', textAlign: 'left' }}>
-                <p style={{ fontWeight: 600, marginBottom: '8px', fontSize: '14px' }}>KuyzPay Error</p>
-                      <p style={{ fontSize: '12px' }}>Gagal membuat QRIS. Silakan coba lagi atau hubungi admin.</p>
+                  ) : rawQr ? (
+                    <QRCodeSVG value={rawQr} size={220} title="QRIS pembayaran" />
+                  ) : unavailable ? (
+                    <div role="alert" style={{ maxWidth: 260, padding: 'var(--space-4)', textAlign: 'left' }}>
+                      <p style={{ fontWeight: 600, marginBottom: '8px' }}>QRIS belum tersedia</p>
+                      <p style={{ fontSize: 'var(--text-sm)' }}>{paymentError || (canRetry ? 'Silakan coba lagi untuk mendapatkan QRIS yang valid.' : 'Waktu pembayaran telah berakhir atau pesanan sudah tidak dapat dibayar.')}</p>
+                      {canRetry && <button type="button" className="btn btn-outline" style={{ marginTop: 'var(--space-3)' }} disabled={paymentLoading} onClick={() => checkOrCreatePayment(true)}>{paymentLoading ? 'Mencoba...' : 'Coba Lagi'}</button>}
                     </div>
                   ) : (
                     <div style={{ width: 200, height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--neutral-100)', borderRadius: '8px', flexDirection: 'column', gap: '8px' }}>

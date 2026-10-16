@@ -86,6 +86,7 @@ const startServer = async () => {
   await testConnection();
   // Required for safe order creation. Do not accept traffic if this migration fails.
   await require('./migrations/add-order-counters')();
+  await require('./migrations/add-qris-attempts')();
   await require('./migrations/validate-recipe-quantities')();
 
   // Auto-migrate: create settings table & add service_charge column

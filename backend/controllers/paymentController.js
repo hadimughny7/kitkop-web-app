@@ -1,14 +1,12 @@
 const { emitRealtime } = require('../socket/realtimeEvents');
-const axios = require('axios');
-const { Transaction, Order, OrderItem } = require('../models');
+const { Transaction, Order, OrderItem, QrisAttempt } = require('../models');
+const { createOrReuseQris, currentAttempt, paymentData } = require('../services/qrisPayments');
 const { deductStockForOrder } = require('./stockController');
 const { sequelize } = require('../config/database');
 const { validPaymentWebhookSignature } = require('../services/paymentWebhookSignature');
 
 // KuyzPay configuration
-const KUYZPAY_MERCHANT_ID = process.env.KUYZPAY_MERCHANT_ID;
 const KUYZPAY_SECRET = process.env.KUYZPAY_SECRET;
-const KUYZPAY_BASE_URL = process.env.KUYZPAY_BASE_URL || 'https://api.kuyzpay.xyz/api/v1';
 
 /**
  * POST /api/payments/create-qris
@@ -17,141 +15,12 @@ const KUYZPAY_BASE_URL = process.env.KUYZPAY_BASE_URL || 'https://api.kuyzpay.xy
 const createQrisPayment = async (req, res, next) => {
   try {
     const { order_id } = req.body;
-
-    const order = await Order.findByPk(order_id);
-    if (!order) {
-      return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
+    if (!Number.isInteger(Number(order_id)) || Number(order_id) < 1 || typeof order_id === 'boolean' || Array.isArray(order_id)) {
+      return res.status(400).json({ success: false, message: 'ID pesanan tidak valid.' });
     }
-
-    // Check if transaction already exists and is paid
-    const existingTrx = await Transaction.findOne({ where: { order_id } });
-    if (existingTrx && existingTrx.status === 'paid') {
-      return res.status(400).json({ success: false, message: 'Pesanan sudah dibayar.' });
-    }
-
-    // If existing pending transaction with a valid QR, return it
-    if (existingTrx && existingTrx.status === 'pending' && existingTrx.qris_content) {
-      return res.json({
-        success: true,
-        message: 'QRIS sudah tersedia.',
-        data: {
-          transaction_id: existingTrx.id,
-          ref_id: existingTrx.ref_id,
-          amount: parseFloat(existingTrx.amount),
-          qr_url: existingTrx.qris_content,
-          pay_url: existingTrx.pay_url || null,
-          status: existingTrx.status,
-        },
-      });
-    }
-
-    const refId = `KTK-${order.id}-${Date.now()}`;
-    const grossAmount = Math.round(parseFloat(order.total));
-
-    // Call KuyzPay API to create order
-    const kuyzpayPayload = {
-      merchant_id: KUYZPAY_MERCHANT_ID,
-      secret: KUYZPAY_SECRET,
-      ref_id: refId,
-      amount: grossAmount,
-      channel: 'QRIS',
-      customer_name: order.customer_name || 'Customer',
-      expire_minutes: 10,
-    };
-
-    console.log('[KuyzPay] Creating order:', { ref_id: refId, amount: grossAmount });
-
-    const kuyzpayRes = await axios.post(`${KUYZPAY_BASE_URL}/order`, kuyzpayPayload, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 15000,
-    });
-
-    const kuyzpayData = kuyzpayRes.data;
-    console.log('[KuyzPay] Response:', JSON.stringify(kuyzpayData, null, 2));
-
-    if (kuyzpayData.status !== 1 && kuyzpayData.status !== 'Success') {
-      throw new Error(`KuyzPay error: ${kuyzpayData.message || 'Unknown error'}`);
-    }
-
-    const orderData = kuyzpayData.data;
-
-    // qr_link is a URL to a QR image, qr_string is for rendering locally
-    const qrUrl = orderData.qr_link || null;
-    const qrString = orderData.qr_string || null;
-    const payUrl = orderData.pay_url || null;
-    const kuyzpayTrxId = orderData.trx_id || null;
-    const totalBayar = orderData.total_bayar || grossAmount;
-
-    // Save or update transaction
-    const trxData = {
-      ref_id: refId,
-      trx_id: kuyzpayTrxId,
-      amount: totalBayar,
-      payment_method: 'QRIS',
-      status: 'pending',
-      qris_content: qrUrl || qrString,
-      pay_url: payUrl,
-    };
-
-    let trx;
-    if (existingTrx) {
-      trx = await existingTrx.update(trxData);
-    } else {
-      trx = await Transaction.create({ order_id, ...trxData });
-    }
-
-    res.json({
-      success: true,
-      message: 'QRIS berhasil dibuat via KuyzPay.',
-      data: {
-        transaction_id: trx.id,
-        ref_id: trx.ref_id,
-        trx_id: kuyzpayTrxId,
-        qr_url: qrUrl,
-        qr_string: qrString,
-        pay_url: payUrl,
-        total_bayar: totalBayar,
-        status: trx.status,
-      },
-    });
-  } catch (error) {
-    console.error('[KuyzPay] Charge error:', error.response?.data || error.message);
-
-    // Fallback: create mock transaction if KuyzPay fails
-    try {
-      const { order_id } = req.body;
-      const order = await Order.findByPk(order_id);
-      if (!order) {
-        return next(error);
-      }
-
-      const ref_id = `KTK-MOCK-${Date.now()}`;
-      const existingTrx = await Transaction.findOne({ where: { order_id } });
-      const trx = existingTrx || await Transaction.create({
-        order_id,
-        ref_id,
-        amount: parseFloat(order.total),
-        payment_method: 'QRIS',
-        status: 'pending',
-        qris_content: `mock-qris-${ref_id}`,
-      });
-
-      return res.json({
-        success: true,
-        message: 'QRIS dibuat (mode fallback — KuyzPay tidak tersedia).',
-        data: {
-          transaction_id: trx.id,
-          ref_id: trx.ref_id,
-          amount: parseFloat(order.total),
-          qr_url: null,
-          qris_content: trx.qris_content,
-          status: trx.status,
-        },
-      });
-    } catch (fallbackError) {
-      next(fallbackError);
-    }
-  }
+    const result = await createOrReuseQris(Number(order_id));
+    res.status(result.httpStatus).json({ success: true, message: result.data.status === 'paid' ? 'Pesanan sudah dibayar.' : result.data.qris_state === 'creating' ? 'QRIS sedang dibuat.' : 'Status QRIS diperbarui.', data: result.data });
+  } catch (error) { next(error); }
 };
 
 /**
@@ -185,7 +54,9 @@ const paymentCallback = async (req, res, next) => {
     console.log(`[KuyzPay Webhook] ref_id: ${refId}, status: ${kuyzpayStatus}`);
 
     // Find transaction by ref_id
-    const trx = await Transaction.findOne({ where: { ref_id: refId } });
+    const attempt = await QrisAttempt.findOne({ where: { ref_id: refId, source: 'gateway' } });
+    const trx = await Transaction.findOne({ where: { ref_id: refId } })
+      || (attempt ? await Transaction.findByPk(attempt.transaction_id) : null);
     if (!trx) {
       console.warn(`[KuyzPay Webhook] Transaction not found for ref_id: ${refId}`);
       return res.status(200).json({ status: true, message: 'Transaction not found, ignored.' });
@@ -195,9 +66,6 @@ const paymentCallback = async (req, res, next) => {
     if (event === 'payment.success' || kuyzpayStatus === 'Success' || kuyzpayStatus === 'Completed') {
       const t = await sequelize.transaction();
       try {
-        trx.status = 'paid';
-        trx.paid_at = new Date();
-        if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
         // Update order status to confirmed
         const order = await Order.findByPk(trx.order_id, {
           include: [{ model: OrderItem, as: 'items' }],
@@ -206,6 +74,17 @@ const paymentCallback = async (req, res, next) => {
         });
 
         // Keep lock order consistent with cancellation and cash payment: order first.
+        await trx.reload({ transaction: t, lock: t.LOCK.UPDATE });
+        const alreadyPaid = trx.status === 'paid';
+        if (!alreadyPaid) {
+          trx.status = 'paid';
+          trx.paid_at = new Date();
+          if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
+        }
+        if (attempt) {
+          await QrisAttempt.update({ status: 'paid', ...(kuyzpayTrxId ? { trx_id: kuyzpayTrxId } : {}) }, { where: { id: attempt.id }, transaction: t });
+          if (!alreadyPaid && trx.payment_method !== 'CASH') trx.amount = (await attempt.reload({ transaction: t })).amount;
+        }
         await trx.save({ transaction: t });
 
         if (order && order.status === 'pending') {
@@ -234,19 +113,21 @@ const paymentCallback = async (req, res, next) => {
         await t.rollback();
         throw dbError;
       }
-    } else if (event === 'payment.expired' || kuyzpayStatus === 'Expired') {
-      trx.status = 'expired';
-      await trx.save();
-    } else if (event === 'payment.cancelled' || kuyzpayStatus === 'Cancelled') {
-      trx.status = 'failed';
-      await trx.save();
+    } else if (['payment.expired', 'payment.cancelled'].includes(event) || ['Expired', 'Cancelled'].includes(kuyzpayStatus)) {
+      const status = event === 'payment.expired' || kuyzpayStatus === 'Expired' ? 'expired' : 'failed';
+      await sequelize.transaction(async transaction => {
+        await Order.findByPk(trx.order_id, { transaction, lock: transaction.LOCK.UPDATE });
+        const current = await Transaction.findByPk(trx.id, { transaction, lock: transaction.LOCK.UPDATE });
+        if (attempt) {
+          await QrisAttempt.update({ status }, { where: { id: attempt.id, status: { [require('sequelize').Op.ne]: 'paid' } }, transaction });
+        }
+        // An old attempt may expire after a newer invoice or cash payment exists.
+        if (current.ref_id === refId && current.status !== 'paid') await current.update({ status }, { transaction });
+      });
     } else if (event === 'payment.late' || kuyzpayStatus === 'PaidLate') {
       // Late payment — still mark as paid
       const t = await sequelize.transaction();
       try {
-        trx.status = 'paid';
-        trx.paid_at = new Date();
-        if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
         const order = await Order.findByPk(trx.order_id, {
           include: [{ model: OrderItem, as: 'items' }],
           transaction: t,
@@ -254,6 +135,17 @@ const paymentCallback = async (req, res, next) => {
         });
 
         // Keep lock order consistent with cancellation and cash payment: order first.
+        await trx.reload({ transaction: t, lock: t.LOCK.UPDATE });
+        const alreadyPaid = trx.status === 'paid';
+        if (!alreadyPaid) {
+          trx.status = 'paid';
+          trx.paid_at = new Date();
+          if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
+        }
+        if (attempt) {
+          await QrisAttempt.update({ status: 'paid', ...(kuyzpayTrxId ? { trx_id: kuyzpayTrxId } : {}) }, { where: { id: attempt.id }, transaction: t });
+          if (!alreadyPaid && trx.payment_method !== 'CASH') trx.amount = (await attempt.reload({ transaction: t })).amount;
+        }
         await trx.save({ transaction: t });
 
         if (order && order.status === 'pending') {
@@ -291,7 +183,7 @@ const paymentCallback = async (req, res, next) => {
 
 /**
  * GET /api/payments/:orderId/status
- * Get payment status — also checks KuyzPay API as fallback
+ * Return stored payment status and validated QRIS retry metadata.
  */
 const getPaymentStatus = async (req, res, next) => {
   try {
@@ -303,18 +195,9 @@ const getPaymentStatus = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan.' });
     }
 
-    res.json({
-      success: true,
-      data: {
-        status: trx.status,
-        payment_method: trx.payment_method,
-        amount: parseFloat(trx.amount),
-        paid_at: trx.paid_at,
-        qr_url: trx.qris_content,
-        qris_content: trx.qris_content,
-        pay_url: trx.pay_url || null,
-      },
-    });
+    const order = await Order.findByPk(trx.order_id);
+    const attempt = await currentAttempt(trx);
+    res.json({ success: true, data: paymentData(trx, attempt, order) });
   } catch (error) {
     next(error);
   }
@@ -410,6 +293,7 @@ const payCash = async (req, res, next) => {
     if (existingTrx) {
       existingTrx.status = 'paid';
       existingTrx.payment_method = 'CASH';
+      existingTrx.amount = Number(order.total);
       existingTrx.paid_at = new Date();
       await existingTrx.save({ transaction: t });
       trx = existingTrx;

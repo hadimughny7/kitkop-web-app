@@ -9,6 +9,7 @@
     "test": "node --test tests/*.test.js",
     "migrate:menu-options": "node migrations/add-menu-options.js",
     "migrate:order-counters": "node migrations/add-order-counters.js",
+    "migrate:qris-attempts": "node migrations/add-qris-attempts.js",
     "migrate:recipe-quantities": "node migrations/validate-recipe-quantities.js"
   },
   "dependencies": {
