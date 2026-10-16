@@ -122,7 +122,8 @@ const startServer = async () => {
   const PAYMENT_TIMEOUT_MINUTES = 10;
   setInterval(async () => {
     try {
-      const { Order, OrderStatusLog, Transaction } = require('./models');
+      const { Order } = require('./models');
+      const { expirePendingOrder } = require('./services/orderCancellation');
       const { Op } = require('sequelize');
 
       const expiredTime = new Date(Date.now() - PAYMENT_TIMEOUT_MINUTES * 60 * 1000);
@@ -135,21 +136,9 @@ const startServer = async () => {
         },
       });
 
-      for (const order of expiredOrders) {
-        order.status = 'cancelled';
-        await order.save();
-
-        await OrderStatusLog.create({
-          order_id: order.id,
-          status: 'cancelled',
-          notes: `Pesanan dibatalkan otomatis: batas waktu pembayaran ${PAYMENT_TIMEOUT_MINUTES} menit telah habis.`,
-        });
-
-        // Cancel pending transaction if exists
-        await Transaction.update(
-          { status: 'expired' },
-          { where: { order_id: order.id, status: 'pending' } }
-        );
+      for (const candidate of expiredOrders) {
+        const order = await expirePendingOrder(candidate.id, expiredTime);
+        if (!order) continue;
 
         // Emit socket event so customer page updates in real-time
         const io = app.get('io');

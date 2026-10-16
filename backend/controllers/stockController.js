@@ -296,16 +296,28 @@ const getStockLogsByDate = async (req, res, next) => {
 // Lock each item before applying its snapshotted recipe: retries cannot double-deduct.
 const applyItemStock = async (orderId, itemId, transaction, refund = false) => {
   const item = await OrderItem.findByPk(itemId, { transaction, lock: transaction.LOCK.UPDATE });
-  if (!item || (refund ? item.stock_refunded : item.stock_deducted || item.status === 'rejected')) return;
-  // Legacy items have no snapshot; retain their existing recipe-based refund behavior.
-  if (refund && item.stock_usage !== null && !item.stock_deducted) return;
-  const recipes = item.stock_usage ?? await MenuRecipe.findAll({ where: { menu_id: item.menu_id }, transaction });
+  if (!item || (refund ? item.stock_refunded : item.stock_deducted || item.status === 'rejected')) return false;
+  // Never restore a modern snapshot whose stock was not deducted.
+  if (refund && item.stock_usage !== null && !item.stock_deducted) return false;
+  let recipes;
+  let multiplier = item.qty;
+  if (refund && item.stock_usage === null) {
+    // A changed current recipe cannot reconstruct what an old order consumed.
+    const deductions = await StockLog.findAll({
+      where: { reference_order_id: orderId, type: 'auto_deduction', notes: `Auto deduction item #${item.id}` }, transaction,
+    });
+    if (!deductions.length) return false; // No item-level evidence: reconcile manually.
+    recipes = deductions.map(log => ({ raw_material_id: log.raw_material_id, quantity_used: -Number(log.change_qty) }));
+    multiplier = 1; // Historical logs already contain the total for this item's qty.
+  } else {
+    recipes = item.stock_usage ?? await MenuRecipe.findAll({ where: { menu_id: item.menu_id }, transaction });
+  }
   // Validate persisted snapshots and legacy recipes before any stock writes.
   for (const recipe of recipes) stockUsageQuantity(recipe.quantity_used);
   for (const recipe of [...recipes].sort((a, b) => a.raw_material_id - b.raw_material_id)) {
     const material = await RawMaterial.findByPk(recipe.raw_material_id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!material) throw new Error('Bahan resep pesanan tidak ditemukan.');
-    const change = Number(recipe.quantity_used) * item.qty * (refund ? 1 : -1);
+    const change = Number(recipe.quantity_used) * multiplier * (refund ? 1 : -1);
     material.stock = Number(material.stock) + change;
     material.status = material.stock <= 0 ? 'kritis' : material.stock <= Number(material.min_stock) ? 'menipis' : 'aman';
     await material.save({ transaction });
@@ -315,12 +327,13 @@ const applyItemStock = async (orderId, itemId, transaction, refund = false) => {
     }, { transaction });
   }
   await item.update(refund ? { stock_refunded: true } : { stock_deducted: true }, { transaction });
+  return true;
 };
 const deductStockForOrder = async (orderId, orderItems, transaction) => {
   for (const item of [...orderItems].sort((a, b) => a.id - b.id)) await applyItemStock(orderId, item.id, transaction);
 };
 const refundStockForOrderItem = async (orderId, orderItem, transaction) => {
-  await applyItemStock(orderId, orderItem.id, transaction, true);
+  return applyItemStock(orderId, orderItem.id, transaction, true);
 };
 
 /**

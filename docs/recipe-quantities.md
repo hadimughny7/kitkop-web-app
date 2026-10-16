@@ -4,7 +4,7 @@
 
 Validasi juga berlaku pada model dan bahan tambahan opsi menu. Batas jumlah bahan tambahan sebelumnya tetap `1000000`. Menu tanpa resep tetap dapat dipesan.
 
-Saat order dibuat, tiap bahan diperiksa sebelum digabungkan ke salinan resep pada item. Saat pembayaran atau refund stok, salinan tersebut diperiksa lagi; item lama yang belum mempunyai salinan menggunakan resep menu yang juga diperiksa. Data tidak valid menghasilkan HTTP 409 pada alur API kasir dan tidak boleh menambah atau mengurangi stok. Transaksi database pembayaran yang sama melakukan rollback atas perubahan stok, log, penanda item, pembayaran, dan status order. Callback penyedia yang gagal diproses tetap mendapat respons gagal agar dapat dicoba ulang setelah data diperbaiki; uang yang sudah dibayar ke penyedia tidak otomatis dikembalikan oleh validasi ini.
+Saat order dibuat, tiap bahan diperiksa sebelum digabungkan ke salinan resep pada item. Saat pembayaran atau refund stok, jumlah bahan diperiksa lagi. Pembayaran item lama tanpa salinan menggunakan resep menu; refund item lama menggunakan bukti pengurangan stok per item, sesuai [aturan pembatalan](order-cancellation.md). Data tidak valid menghasilkan HTTP 409 pada alur API kasir dan tidak boleh menambah atau mengurangi stok. Transaksi database pembayaran yang sama melakukan rollback atas perubahan stok, log, penanda item, pembayaran, dan status order. Callback penyedia yang gagal diproses tetap mendapat respons gagal agar dapat dicoba ulang setelah data diperbaiki; uang yang sudah dibayar ke penyedia tidak otomatis dikembalikan oleh validasi ini.
 
 ## Database dan data lama
 

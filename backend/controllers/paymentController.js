@@ -197,14 +197,15 @@ const paymentCallback = async (req, res, next) => {
         trx.status = 'paid';
         trx.paid_at = new Date();
         if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
-        await trx.save({ transaction: t });
-
         // Update order status to confirmed
         const order = await Order.findByPk(trx.order_id, {
           include: [{ model: OrderItem, as: 'items' }],
           transaction: t,
           lock: t.LOCK.UPDATE,
         });
+
+        // Keep lock order consistent with cancellation and cash payment: order first.
+        await trx.save({ transaction: t });
 
         if (order && order.status === 'pending') {
           order.status = 'confirmed';
@@ -224,7 +225,7 @@ const paymentCallback = async (req, res, next) => {
           io.emit('payment-success', { orderId: trx.order_id, ref_id: refId });
           io.emit('order-status-update', {
             orderId: trx.order_id,
-            status: 'confirmed',
+            status: order?.status,
           });
           io.emit('stock-updated');
         }
@@ -245,15 +246,16 @@ const paymentCallback = async (req, res, next) => {
         trx.status = 'paid';
         trx.paid_at = new Date();
         if (kuyzpayTrxId) trx.trx_id = kuyzpayTrxId;
-        await trx.save({ transaction: t });
-
         const order = await Order.findByPk(trx.order_id, {
           include: [{ model: OrderItem, as: 'items' }],
           transaction: t,
           lock: t.LOCK.UPDATE,
         });
 
-        if (order && (order.status === 'pending' || order.status === 'cancelled')) {
+        // Keep lock order consistent with cancellation and cash payment: order first.
+        await trx.save({ transaction: t });
+
+        if (order && order.status === 'pending') {
           order.status = 'confirmed';
           await order.save({ transaction: t });
 
@@ -267,7 +269,7 @@ const paymentCallback = async (req, res, next) => {
         const io = req.app.get('io');
         if (io) {
           io.emit('payment-success', { orderId: trx.order_id, ref_id: refId });
-          io.emit('order-status-update', { orderId: trx.order_id, status: 'confirmed' });
+          io.emit('order-status-update', { orderId: trx.order_id, status: order?.status });
           io.emit('stock-updated');
         }
 
@@ -334,15 +336,16 @@ const simulatePayment = async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'Transaksi tidak ditemukan.' });
     }
 
+    // Use the same order-first lock as cash, callbacks and cancellation.
+    const order = await Order.findByPk(trx.order_id, {
+      include: [{ model: OrderItem, as: 'items' }],
+      transaction: t,
+      lock: t.LOCK.UPDATE,
+    });
     trx.status = 'paid';
     trx.paid_at = new Date();
     await trx.save({ transaction: t });
 
-    // Update order
-    const order = await Order.findByPk(trx.order_id, {
-      include: [{ model: OrderItem, as: 'items' }],
-      transaction: t,
-    });
     if (order && order.status === 'pending') {
       order.status = 'confirmed';
       await order.save({ transaction: t });
@@ -360,7 +363,7 @@ const simulatePayment = async (req, res, next) => {
       io.emit('payment-success', { orderId: trx.order_id, ref_id: trx.ref_id });
       io.emit('order-status-update', {
         orderId: trx.order_id,
-        status: 'confirmed',
+        status: order?.status,
       });
       io.emit('stock-updated');
     }

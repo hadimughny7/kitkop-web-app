@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { refundStockForOrderItem } = require('./stockController');
 const { assertOrderPaid, getProductionOrder } = require('../services/orderProduction');
+const { refundUnprocessedStock } = require('../services/orderCancellation');
 
 const { allocateOrderNumber, isRetryableOrderError } = require('../services/orderNumbers');
 
@@ -316,9 +317,10 @@ const trackOrder = async (req, res, next) => {
 const updateOrderStatus = async (req, res, next) => {
   try {
     const { status, notes } = req.body;
-    const order = await sequelize.transaction(async (transaction) => {
+    const { order, stockReturned, unchanged } = await sequelize.transaction(async (transaction) => {
       const order = await Order.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
       if (!order) fail('Pesanan tidak ditemukan.', 404);
+      if (status === 'cancelled' && order.status === 'cancelled') return { order, stockReturned: 0, unchanged: true };
 
       const validTransitions = {
         pending: ['confirmed', 'cancelled'],
@@ -334,6 +336,16 @@ const updateOrderStatus = async (req, res, next) => {
         await assertOrderPaid(order, transaction);
       }
 
+      const stockReturned = status === 'cancelled' ? await refundUnprocessedStock(order, transaction) : 0;
+      // General staff actions must track the same item states as kitchen actions.
+      if (status === 'preparing') {
+        await OrderItem.update({ status: 'preparing' }, { where: { order_id: order.id, status: 'pending' }, transaction });
+      } else if (status === 'completed') {
+        await OrderItem.update({ status: 'completed', completed_at: new Date() }, {
+          where: { order_id: order.id, status: { [Op.in]: ['pending', 'preparing'] } }, transaction,
+        });
+      }
+
       order.status = status;
       await order.save({ transaction });
       await OrderStatusLog.create({
@@ -342,18 +354,19 @@ const updateOrderStatus = async (req, res, next) => {
         changed_by: req.user ? req.user.id : null,
         notes: notes || null,
       }, { transaction });
-      return order;
+      return { order, stockReturned, unchanged: false };
     });
 
     // Emit Socket.io event
     const io = req.app.get('io');
-    if (io) {
+    if (io && !unchanged) {
       io.emit('order-status-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         status,
         updatedAt: new Date(),
       });
+      if (stockReturned > 0) io.emit('stock-updated');
     }
 
     res.json({
@@ -377,7 +390,7 @@ const rejectOrderItem = async (req, res, next) => {
   try {
     const { orderId, itemId } = req.params;
 
-    const order = await Order.findByPk(orderId, { transaction: t });
+    const order = await Order.findByPk(orderId, { transaction: t, lock: t.LOCK.UPDATE });
     if (!order) {
       await t.rollback();
       return res.status(404).json({ success: false, message: 'Pesanan tidak ditemukan.' });
@@ -399,12 +412,19 @@ const rejectOrderItem = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Item sudah ditolak.' });
     }
 
+    if (['cancelled', 'completed'].includes(order.status)) {
+      await t.rollback();
+      return res.status(409).json({ success: false, message: 'Item pada pesanan yang sudah dibatalkan atau selesai tidak dapat ditolak.' });
+    }
+    const notStarted = orderItem.status === 'pending' && order.status !== 'ready';
+
     // Mark as rejected
     orderItem.status = 'rejected';
     await orderItem.save({ transaction: t });
 
-    // Refund stock if order is not pending (meaning it was paid)
-    if (order.status !== 'pending' && order.status !== 'cancelled') {
+    // Rejecting a prepared item does not make already-used ingredients reusable.
+    const payment = await Transaction.findOne({ where: { order_id: order.id, status: 'paid' }, transaction: t });
+    if (notStarted && payment) {
       await refundStockForOrderItem(order.id, orderItem, t);
     }
 
@@ -425,8 +445,8 @@ const rejectOrderItem = async (req, res, next) => {
     }
 
     // Fetch tax & service charge percentages from settings
-    const taxSetting = await Setting.findByPk('tax_percentage');
-    const serviceSetting = await Setting.findByPk('service_charge_percentage');
+    const taxSetting = await Setting.findByPk('tax_percentage', { transaction: t });
+    const serviceSetting = await Setting.findByPk('service_charge_percentage', { transaction: t });
     const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
     const serviceRate = serviceSetting ? parseFloat(serviceSetting.value) / 100 : 0;
 

@@ -11,7 +11,7 @@ Tindakan produksi untuk pesanan tanpa transaksi, atau transaksi `pending`, `expi
 
 Proses per item dan proses semua menerima pesanan `confirmed` atau `preparing`. Selesaikan semua menerima pesanan `preparing`. Pesanan `pending`, `cancelled`, atau `completed` tidak dapat diproses kembali. Perubahan status umum juga tidak mengizinkan lompatan langsung dari `pending` ke `preparing`.
 
-Validasi dan perubahan item, pesanan, serta riwayat status menggunakan satu transaksi database dengan penguncian baris pesanan. Notifikasi dikirim setelah commit berhasil. Pembatalan pesanan tetap mengikuti aturan sebelumnya.
+Validasi dan perubahan item, pesanan, serta riwayat status menggunakan satu transaksi database dengan penguncian baris pesanan. Notifikasi dikirim setelah commit berhasil. Pembatalan mengikuti [aturan pengembalian stok untuk item yang belum diproses](order-cancellation.md).
 
 Alur kasir tetap: pembayaran tunai yang berhasil mengubah transaksi menjadi `paid` dan pesanan menjadi `confirmed`, lalu kitchen/barista memproses pesanan.
 
