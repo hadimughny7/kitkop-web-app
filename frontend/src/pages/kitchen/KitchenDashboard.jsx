@@ -1,8 +1,8 @@
 import { optionText } from '../../utils/menuOptions';
 import '../../components/MenuOptions.css';
 import { useState, useEffect, useCallback } from 'react';
-import { orderAPI, BACKEND_URL } from '../../services/api';
-import io from 'socket.io-client';
+import { orderAPI } from '../../services/api';
+import { createStaffSocket } from '../../services/socket';
 import toast from 'react-hot-toast';
 import { HiOutlineClock, HiOutlineCheck, HiOutlineX, HiOutlineRefresh, HiCheck, HiOutlineInbox } from 'react-icons/hi';
 import './StationDashboard.css';
@@ -32,8 +32,7 @@ const KitchenDashboard = () => {
 
   useEffect(() => {
     loadOrders();
-    const socket = io(BACKEND_URL);
-    socket.emit('join-room', 'kitchen');
+    const socket = createStaffSocket();
 
     socket.on('new-order', () => {
       loadOrders();

@@ -25,7 +25,7 @@ test('new orders require an existing active table when a table is supplied', { s
     const express = require('express');
     const app = express(); app.use(express.json());
     const events = [];
-    app.set('io', { emit: (...args) => events.push(args) });
+    app.set('io', { to: () => ({ emit: (...args) => events.push(args) }) });
     app.use('/api/orders', require('../routes/orderRoutes'));
     app.use('/api/tables', require('../routes/tableRoutes'));
     app.use('/api/payments', require('../routes/paymentRoutes'));

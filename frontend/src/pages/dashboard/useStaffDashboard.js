@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
-import { BACKEND_URL, orderAPI } from '../../services/api';
+import { createStaffSocket } from '../../services/socket';
+import { orderAPI } from '../../services/api';
 import { buildStaffSummary, fetchAllOrders, getWibDate } from './staffDashboardData';
 
 export default function useStaffDashboard(isCashier) {
@@ -47,7 +47,7 @@ export default function useStaffDashboard(isCashier) {
       refreshTimer = setTimeout(load, 250);
     };
     const handleVisibility = () => { if (!document.hidden) scheduleRefresh(); };
-    const socket = io(BACKEND_URL);
+    const socket = createStaffSocket();
     ['connect', 'new-order', 'payment-success', 'order-status-update', 'order-item-update'].forEach((event) => {
       socket.on(event, scheduleRefresh);
     });

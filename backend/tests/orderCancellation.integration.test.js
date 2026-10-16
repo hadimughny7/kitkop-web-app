@@ -26,7 +26,7 @@ test('cancellation restores only unprocessed stock exactly once', { skip: proces
     const { capturePaymentWebhookBody } = require('../services/paymentWebhookSignature');
     const app = express(); app.use(express.json({ verify: capturePaymentWebhookBody }));
     const events = [];
-    app.set('io', { emit: (...args) => events.push(args) });
+    app.set('io', { to: () => ({ emit: (...args) => events.push(args) }) });
     app.use('/api/orders', require('../routes/orderRoutes'));
     app.use('/api/payments', require('../routes/paymentRoutes'));
     app.use((err, req, res, next) => res.status(err.statusCode || 500).json({ message: err.message }));

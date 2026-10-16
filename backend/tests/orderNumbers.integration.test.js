@@ -26,7 +26,7 @@ test('concurrent orders have unique numbers, correct contents and atomic retry/r
     const express = require('express');
     const app = express(); app.use(express.json());
     const events = [];
-    app.set('io', { emit: (...args) => events.push(args) });
+    app.set('io', { to: () => ({ emit: (...args) => events.push(args) }) });
     app.use('/api/orders', require('../routes/orderRoutes'));
     app.use((err, req, res, next) => res.status(err.statusCode || 500).json({ message: err.message }));
     server = app.listen(0, '127.0.0.1');

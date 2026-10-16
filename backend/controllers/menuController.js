@@ -1,3 +1,4 @@
+const { emitRealtime } = require('../socket/realtimeEvents');
 const { Menu, MenuCategory, MenuRecipe, RawMaterial, OrderItem, OptionGroup } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
@@ -271,7 +272,7 @@ const setMenuOptionAvailability = async (req, res, next) => {
       const definitions = groups.map((g) => ({ ...g.toJSON(), choices: g.choices.map((c) => g.id === target.id && c.id === req.params.choiceId ? { ...c, is_available: req.body.is_available, is_default: req.body.is_available && c.is_default } : c) }));
       await saveMenuOptions(menu, parseMenuOptions(definitions), transaction, false);
     });
-    req.app.get('io')?.emit('menu-updated');
+    emitRealtime(req.app.get('io'), 'menu-updated');
     res.json({ success: true, message: 'Ketersediaan pilihan diperbarui.' });
   } catch (error) { next(error); }
 };

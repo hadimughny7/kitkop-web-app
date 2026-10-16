@@ -24,7 +24,7 @@ test('recipe API, database constraint and payment stock guard reject invalid qua
     const express = require('express');
     const app = express(); app.use(express.json());
     const events = [];
-    app.set('io', { emit: (...args) => events.push(args) });
+    app.set('io', { to: () => ({ emit: (...args) => events.push(args) }) });
     app.use('/api/recipes', require('../routes/recipeRoutes'));
     app.use('/api/orders', require('../routes/orderRoutes'));
     app.use('/api/payments', require('../routes/paymentRoutes'));

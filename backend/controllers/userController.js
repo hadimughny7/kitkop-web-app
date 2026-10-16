@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const { Op } = require('sequelize');
+const { userRoom } = require('../socket/realtimeEvents');
 
 /**
  * GET /api/users
@@ -177,6 +178,9 @@ const updateUser = async (req, res, next) => {
     }
 
     await user.save();
+    if (role !== undefined || is_active !== undefined || password) {
+      req.app.get('io')?.in(userRoom(user.id)).disconnectSockets(true);
+    }
 
     res.json({
       success: true,
@@ -219,6 +223,7 @@ const deleteUser = async (req, res, next) => {
     }
 
     await user.destroy();
+    req.app.get('io')?.in(userRoom(user.id)).disconnectSockets(true);
 
     res.json({
       success: true,

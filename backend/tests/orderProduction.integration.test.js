@@ -22,7 +22,7 @@ test('production requires paid orders and preserves normal kitchen workflows', {
     const app = express();
     app.use(express.json());
     const events = [];
-    app.set('io', { emit: (...args) => events.push(args) });
+    app.set('io', { to: () => ({ emit: (...args) => events.push(args) }) });
     app.use('/api/orders', require('../routes/orderRoutes'));
     app.use('/api/payments', require('../routes/paymentRoutes'));
     app.use((err, req, res, next) => res.status(err.statusCode || 500).json({ message: err.message }));

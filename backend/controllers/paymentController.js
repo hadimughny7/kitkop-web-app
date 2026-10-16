@@ -1,3 +1,4 @@
+const { emitRealtime } = require('../socket/realtimeEvents');
 const axios = require('axios');
 const { Transaction, Order, OrderItem } = require('../models');
 const { deductStockForOrder } = require('./stockController');
@@ -222,12 +223,12 @@ const paymentCallback = async (req, res, next) => {
         // Emit socket events
         const io = req.app.get('io');
         if (io) {
-          io.emit('payment-success', { orderId: trx.order_id, ref_id: refId });
-          io.emit('order-status-update', {
+          emitRealtime(io, 'payment-success', { orderId: trx.order_id, ref_id: refId });
+          emitRealtime(io, 'order-status-update', {
             orderId: trx.order_id,
             status: order?.status,
           });
-          io.emit('stock-updated');
+          emitRealtime(io, 'stock-updated');
         }
       } catch (dbError) {
         await t.rollback();
@@ -268,9 +269,9 @@ const paymentCallback = async (req, res, next) => {
 
         const io = req.app.get('io');
         if (io) {
-          io.emit('payment-success', { orderId: trx.order_id, ref_id: refId });
-          io.emit('order-status-update', { orderId: trx.order_id, status: order?.status });
-          io.emit('stock-updated');
+          emitRealtime(io, 'payment-success', { orderId: trx.order_id, ref_id: refId });
+          emitRealtime(io, 'order-status-update', { orderId: trx.order_id, status: order?.status });
+          emitRealtime(io, 'stock-updated');
         }
 
         console.log(`[KuyzPay Webhook] Late payment processed for: ${refId}`);
@@ -360,12 +361,12 @@ const simulatePayment = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('payment-success', { orderId: trx.order_id, ref_id: trx.ref_id });
-      io.emit('order-status-update', {
+      emitRealtime(io, 'payment-success', { orderId: trx.order_id, ref_id: trx.ref_id });
+      emitRealtime(io, 'order-status-update', {
         orderId: trx.order_id,
         status: order?.status,
       });
-      io.emit('stock-updated');
+      emitRealtime(io, 'stock-updated');
     }
 
     res.json({ success: true, message: 'Pembayaran berhasil (simulasi).', data: trx });
@@ -435,12 +436,12 @@ const payCash = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('payment-success', { orderId: order.id, ref_id: trx.ref_id });
-      io.emit('order-status-update', {
+      emitRealtime(io, 'payment-success', { orderId: order.id, ref_id: trx.ref_id });
+      emitRealtime(io, 'order-status-update', {
         orderId: order.id,
         status: 'confirmed',
       });
-      io.emit('stock-updated');
+      emitRealtime(io, 'stock-updated');
     }
 
     res.json({ success: true, message: 'Pembayaran tunai berhasil diproses.', data: trx });

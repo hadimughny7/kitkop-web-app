@@ -1,3 +1,4 @@
+const { emitRealtime } = require('./socket/realtimeEvents');
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -143,7 +144,7 @@ const startServer = async () => {
         // Emit socket event so customer page updates in real-time
         const io = app.get('io');
         if (io) {
-          io.emit('order-status-update', {
+          emitRealtime(io, 'order-status-update', {
             orderId: order.id,
             orderNumber: order.order_number,
             status: 'cancelled',

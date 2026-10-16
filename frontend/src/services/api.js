@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { rememberOrderTracking } from './orderTracking';
 
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const API_BASE_URL = `${BACKEND_URL}/api`;
@@ -99,7 +100,11 @@ export const tableAPI = {
 // ORDERS
 // ============================================
 export const orderAPI = {
-  create: (data) => api.post('/orders', data),
+  create: async (data) => {
+    const response = await api.post('/orders', data);
+    rememberOrderTracking(response.data.data);
+    return response;
+  },
   getAll: (params) => api.get('/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
   track: (orderNumber) => api.get(`/orders/track/${orderNumber}`),

@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { io } from 'socket.io-client';
+import { createStaffSocket } from '../services/socket';
 import toast from 'react-hot-toast';
 import { HiOutlineBell, HiVolumeOff } from 'react-icons/hi';
-import { BACKEND_URL } from '../services/api';
 import { initAudioContext, startNotificationAlert, stopNotificationAlert } from '../utils/notificationSound';
 import './StaffOrderNotifications.css';
 
@@ -12,7 +11,7 @@ const StaffOrderNotifications = () => {
   const pendingOrders = useRef(new Set());
 
   useEffect(() => {
-    const socket = io(BACKEND_URL);
+    const socket = createStaffSocket();
     const notifiedOrders = new Set();
     const toastIds = new Set();
     const unlockAudio = () => initAudioContext();

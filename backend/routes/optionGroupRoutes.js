@@ -1,3 +1,4 @@
+const { emitRealtime } = require('../socket/realtimeEvents');
 const router = require('express').Router();
 const { verifyToken, authorizeRoles } = require('../middleware/auth');
 const { OptionGroup, Menu, RawMaterial } = require('../models');
@@ -25,7 +26,7 @@ async function save(req, res, next) {
       if (!existing) fail('Kelompok tidak ditemukan.', 404);
       return existing.update(definition, { transaction });
     });
-    req.app.get('io')?.emit('menu-updated');
+    emitRealtime(req.app.get('io'), 'menu-updated');
     res.json({ success: true, data: group });
   } catch (error) { next(error); }
 }
@@ -41,7 +42,7 @@ router.patch('/:id/choices/:choiceId/availability', authorizeRoles('owner', 'man
       const choices = group.choices.map((c) => c.id === req.params.choiceId ? { ...c, is_available: req.body.is_available, is_default: req.body.is_available ? c.is_default : false } : c);
       return group.update({ choices }, { transaction });
     });
-    req.app.get('io')?.emit('menu-updated');
+    emitRealtime(req.app.get('io'), 'menu-updated');
     res.json({ success: true, data: result });
   } catch (error) { next(error); }
 });

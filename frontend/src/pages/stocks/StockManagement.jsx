@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { stockAPI, recipeAPI, menuAPI, orderAPI, BACKEND_URL } from '../../services/api';
+import { stockAPI, recipeAPI, menuAPI, orderAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineBookOpen, HiOutlineExclamationCircle, HiOutlineCheckCircle, HiOutlineCube, HiOutlineShoppingCart, HiOutlineUpload, HiOutlineMinusCircle } from 'react-icons/hi';
-import { io } from 'socket.io-client';
+import { createStaffSocket } from '../../services/socket';
 import { useAuth } from '../../context/AuthContext';
 
 const StockManagement = () => {
@@ -40,7 +40,7 @@ const StockManagement = () => {
   };
 
   useEffect(() => {
-    const socket = io(BACKEND_URL);
+    const socket = createStaffSocket();
     socket.on('stock-updated', () => {
       loadStocks();
       loadLogs();

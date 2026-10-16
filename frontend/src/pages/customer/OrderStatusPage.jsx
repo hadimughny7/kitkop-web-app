@@ -2,10 +2,11 @@ import { optionText } from '../../utils/menuOptions';
 import '../../components/MenuOptions.css';
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
+import { orderAPI, paymentAPI } from '../../services/api';
 import { HiCheck, HiOutlineClock, HiOutlineRefresh, HiOutlineX, HiOutlineExclamation } from 'react-icons/hi';
 import { useCart } from '../../context/CartContext';
-import io from 'socket.io-client';
+import { createOrderSocket } from '../../services/socket';
+import { getOrderTrackingToken } from '../../services/orderTracking';
 import toast from 'react-hot-toast';
 import './CustomerPages.css';
 
@@ -30,26 +31,21 @@ const OrderStatusPage = () => {
 
   useEffect(() => {
     loadOrder();
-    const socket = io(BACKEND_URL);
-    socket.emit('track-order', orderNumber);
+    const socket = createOrderSocket(orderNumber, getOrderTrackingToken(orderNumber));
+    if (!socket) return; // Existing links without a checkout token use HTTP polling.
+    socket.on('connect', loadOrder);
 
-    socket.on('order-status-update', (data) => {
-      if (data.orderNumber === orderNumber || data.orderId === order?.id) {
-        loadOrder();
-      }
+    socket.on('order-status-update', () => {
+      loadOrder();
     });
 
-    socket.on('order-item-update', (data) => {
-      if (data.orderNumber === orderNumber || data.orderId === order?.id) {
-        loadOrder();
-      }
+    socket.on('order-item-update', () => {
+      loadOrder();
     });
 
-    socket.on('payment-success', (data) => {
-      if (data.orderId === order?.id) {
-        toast.success('Pembayaran berhasil!');
-        loadOrder();
-      }
+    socket.on('payment-success', () => {
+      toast.success('Pembayaran berhasil!');
+      loadOrder();
     });
 
     return () => {
@@ -63,18 +59,13 @@ const OrderStatusPage = () => {
     }
   }, [order]);
 
-  // Lightweight polling fallback: check local DB every 5s in case socket event was missed
+  // Covers missed events and old links without a per-order realtime token.
   useEffect(() => {
-    if (!order || order.status !== 'pending') return;
+    if (!order || ['completed', 'cancelled'].includes(order.status)) return;
 
     const pollInterval = setInterval(async () => {
       try {
-        const res = await paymentAPI.getStatus(order.id);
-        if (res.data.data.status === 'paid') {
-          toast.success('Pembayaran berhasil!');
-          loadOrder();
-          clearInterval(pollInterval);
-        }
+        await loadOrder();
       } catch (err) {
         // ignore
       }

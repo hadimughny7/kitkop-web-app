@@ -1,3 +1,4 @@
+const { emitRealtime } = require('../socket/realtimeEvents');
 const { RawMaterial, MenuRecipe, StockLog, Menu, Order, Customer, Table, User, OrderItem, OptionGroup, OptionTemplate } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
@@ -150,7 +151,7 @@ const restockMaterial = async (req, res, next) => {
     });
 
     const io = req.app.get('io');
-    if (io) io.emit('stock-updated');
+    if (io) emitRealtime(io, 'stock-updated');
 
     res.json({ success: true, message: 'Restock berhasil.', data: material });
   } catch (error) {
@@ -378,7 +379,7 @@ const reduceMaterial = async (req, res, next) => {
     });
 
     const io = req.app.get('io');
-    if (io) io.emit('stock-updated');
+    if (io) emitRealtime(io, 'stock-updated');
 
     res.json({ success: true, message: 'Pengurangan stok berhasil.', data: material });
   } catch (error) {

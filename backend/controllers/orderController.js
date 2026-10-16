@@ -5,6 +5,8 @@ const { sequelize } = require('../config/database');
 const { refundStockForOrderItem } = require('./stockController');
 const { assertOrderPaid, getProductionOrder } = require('../services/orderProduction');
 const { refundUnprocessedStock } = require('../services/orderCancellation');
+const { issueTrackingToken } = require('../services/orderTracking');
+const { emitRealtime } = require('../socket/realtimeEvents');
 
 const { allocateOrderNumber, isRetryableOrderError } = require('../services/orderNumbers');
 
@@ -181,6 +183,7 @@ const createOrder = async (req, res, next, attempt = 0) => {
       notes: 'Pesanan dibuat',
     }, { transaction: t });
 
+    const trackingToken = issueTrackingToken(order);
     await t.commit();
 
     // Fetch complete order for response
@@ -196,13 +199,13 @@ const createOrder = async (req, res, next, attempt = 0) => {
     // Emit Socket.io event for real-time update
     const io = req.app.get('io');
     if (io) {
-      io.emit('new-order', completeOrder);
+      emitRealtime(io, 'new-order', { orderId: order.id, orderNumber: order.order_number, status: order.status });
     }
 
     res.status(201).json({
       success: true,
       message: 'Pesanan berhasil dibuat.',
-      data: completeOrder,
+      data: { ...completeOrder.toJSON(), tracking_token: trackingToken },
     });
   } catch (error) {
     const committed = t?.finished === 'commit';
@@ -374,13 +377,13 @@ const updateOrderStatus = async (req, res, next) => {
     // Emit Socket.io event
     const io = req.app.get('io');
     if (io && !unchanged) {
-      io.emit('order-status-update', {
+      emitRealtime(io, 'order-status-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         status,
         updatedAt: new Date(),
       });
-      if (stockReturned > 0) io.emit('stock-updated');
+      if (stockReturned > 0) emitRealtime(io, 'stock-updated');
     }
 
     res.json({
@@ -495,14 +498,14 @@ const rejectOrderItem = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-status-update', {
+      emitRealtime(io, 'order-status-update', {
         orderId: completeOrder.id,
         orderNumber: completeOrder.order_number,
         status: completeOrder.status,
         updatedAt: new Date(),
         items: completeOrder.items,
       });
-      io.emit('stock-updated');
+      emitRealtime(io, 'stock-updated');
     }
 
     res.json({
@@ -591,14 +594,14 @@ const updateItemStatus = async (req, res, next) => {
     // Emit socket event
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-item-update', {
+      emitRealtime(io, 'order-item-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         itemId: orderItem.id,
         itemStatus: status,
         orderStatus: order.status,
       });
-      io.emit('order-status-update', {
+      emitRealtime(io, 'order-status-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         status: order.status,
@@ -651,14 +654,14 @@ const processAllItems = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-item-update', {
+      emitRealtime(io, 'order-item-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         itemStatus: 'preparing',
         orderStatus: order.status,
         bulk: true,
       });
-      io.emit('order-status-update', {
+      emitRealtime(io, 'order-status-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         status: order.status,
@@ -717,14 +720,14 @@ const completeAllItems = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) {
-      io.emit('order-item-update', {
+      emitRealtime(io, 'order-item-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         itemStatus: 'completed',
         orderStatus: 'completed',
         bulk: true,
       });
-      io.emit('order-status-update', {
+      emitRealtime(io, 'order-status-update', {
         orderId: order.id,
         orderNumber: order.order_number,
         status: 'completed',

@@ -34,7 +34,7 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     const { capturePaymentWebhookBody } = require('../services/paymentWebhookSignature');
     const app = express(); app.use(express.json({ verify: capturePaymentWebhookBody }));
     const emittedEvents = [];
-    app.set('io', { emit: (...args) => emittedEvents.push(args) });
+    app.set('io', { to: () => ({ emit: (...args) => emittedEvents.push(args) }) });
     app.use('/api/option-groups', require('../routes/optionGroupRoutes'));
     app.use('/api/option-templates', require('../routes/optionTemplateRoutes'));
     app.use('/api/menus', require('../routes/menuRoutes'));

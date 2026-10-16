@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { stockAPI, BACKEND_URL } from '../../services/api';
-import { io } from 'socket.io-client';
+import { stockAPI } from '../../services/api';
+import { createStaffSocket } from '../../services/socket';
 import toast from 'react-hot-toast';
 import {
   HiOutlineChevronLeft,
@@ -40,7 +40,7 @@ const StockHistory = () => {
 
   // Realtime: listen for stock changes via socket
   useEffect(() => {
-    const socket = io(BACKEND_URL);
+    const socket = createStaffSocket();
 
     const handleUpdate = () => {
       // Only auto-refresh if we're viewing today

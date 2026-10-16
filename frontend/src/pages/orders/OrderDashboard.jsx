@@ -1,7 +1,7 @@
 import { optionText } from '../../utils/menuOptions';
 import '../../components/MenuOptions.css';
 import { useState, useEffect, useRef } from 'react';
-import { orderAPI, paymentAPI, BACKEND_URL } from '../../services/api';
+import { orderAPI, paymentAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import {
   HiOutlineCash,
@@ -13,7 +13,7 @@ import {
   HiOutlinePrinter,
   HiOutlineEye,
 } from 'react-icons/hi';
-import { io } from 'socket.io-client';
+import { createStaffSocket } from '../../services/socket';
 import './OrderDashboard.css';
 
 const OrderDashboard = () => {
@@ -62,8 +62,7 @@ const OrderDashboard = () => {
   }, [search, statusFilter, typeFilter, dateFilter]);
 
   useEffect(() => {
-    const socket = io(BACKEND_URL);
-    socket.emit('join-role', 'admin');
+    const socket = createStaffSocket();
 
     socket.on('new-order', () => {
       setTimeout(() => loadOrders(), 300);
