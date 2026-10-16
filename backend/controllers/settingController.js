@@ -1,4 +1,5 @@
 const { Setting } = require('../models');
+const { sequelize } = require('../config/database');
 
 /**
  * Get all settings (public)
@@ -22,30 +23,25 @@ const getSettings = async (req, res) => {
  */
 const updateSettings = async (req, res) => {
   try {
-    const { tax_percentage, service_charge_percentage } = req.body;
-
-    // Validate
-    if (tax_percentage !== undefined) {
-      const taxVal = parseFloat(tax_percentage);
-      if (isNaN(taxVal) || taxVal < 0 || taxVal > 100) {
-        return res.status(400).json({ success: false, message: 'Persentase pajak harus antara 0-100.' });
+    const updates = [];
+    // Validate the entire request before opening a transaction or writing any row.
+    for (const [key, label] of [['tax_percentage', 'pajak'], ['service_charge_percentage', 'service charge']]) {
+      const input = req.body[key];
+      if (input === undefined) continue;
+      const numericInput = typeof input === 'number'
+        || (typeof input === 'string' && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(input.trim()));
+      const value = numericInput ? Number(input) : NaN;
+      if (!Number.isFinite(value) || value < 0 || value > 100) {
+        return res.status(400).json({ success: false, message: `Persentase ${label} harus antara 0-100.` });
       }
-      await Setting.upsert({ key: 'tax_percentage', value: String(taxVal), description: 'Persentase pajak (%)' });
+      updates.push({ key, value: String(value), description: `Persentase ${label} (%)` });
     }
 
-    if (service_charge_percentage !== undefined) {
-      const serviceVal = parseFloat(service_charge_percentage);
-      if (isNaN(serviceVal) || serviceVal < 0 || serviceVal > 100) {
-        return res.status(400).json({ success: false, message: 'Persentase service charge harus antara 0-100.' });
-      }
-      await Setting.upsert({ key: 'service_charge_percentage', value: String(serviceVal), description: 'Persentase service charge (%)' });
-    }
-
-    // Return updated settings
-    const settings = await Setting.findAll();
-    const result = {};
-    settings.forEach(s => {
-      result[s.key] = s.value;
+    const result = await sequelize.transaction(async transaction => {
+      // Keep a stable write order for concurrent requests changing both settings.
+      for (const update of updates) await Setting.upsert(update, { transaction });
+      const settings = await Setting.findAll({ transaction });
+      return Object.fromEntries(settings.map(setting => [setting.key, setting.value]));
     });
 
     res.json({ success: true, message: 'Pengaturan berhasil diperbarui.', data: result });
