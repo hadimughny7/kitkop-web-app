@@ -1,0 +1,26 @@
+.menu-management,
+.menu-management-heading,
+.menu-management .search-bar {
+  min-width: 0;
+}
+
+.menu-management-heading {
+  max-width: 100%;
+}
+
+.menu-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .menu-management-actions {
+    width: 100%;
+  }
+
+  .menu-management-actions .btn {
+    flex: 1 1 auto;
+  }
+}

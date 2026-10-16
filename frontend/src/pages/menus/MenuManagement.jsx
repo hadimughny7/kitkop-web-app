@@ -4,6 +4,7 @@ import { menuAPI, categoryAPI, stockAPI, optionTemplateAPI, BACKEND_URL } from '
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineTag } from 'react-icons/hi';
+import './MenuManagement.css';
 
 const MenuManagement = () => {
   const menuDialog = useRef(null);
@@ -190,14 +191,14 @@ const MenuManagement = () => {
   if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
 
   return (
-    <div>
+    <div className="menu-management">
       <div className="page-header">
-        <div>
+        <div className="menu-management-heading">
           <h1 className="page-title">Manajemen Menu & Kategori</h1>
           <p className="page-subtitle">Kelola daftar menu yang ditampilkan ke pelanggan</p>
         </div>
         {isManager && (
-          <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <div className="menu-management-actions">
             <button className="btn btn-secondary" onClick={() => { setEditCat(null); setCatForm({ name: '', description: '' }); setShowCatModal(true); }}>
               <HiOutlineTag /> Kelola Kategori
             </button>
