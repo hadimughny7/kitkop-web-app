@@ -46,3 +46,5 @@ Item pesanan menerima `option_ids` dan `expected_price`; harga kiriman klien tid
 Daftar template: `GET /api/option-templates` dan `DELETE /api/option-templates/:id` (owner/manajer). Template adalah salinan independen, tanpa foreign key ke menu. Penghapusan menggunakan penanda agar penyimpanan menu berikutnya tidak memunculkan pintasan yang sama lagi.
 
 `max_choices: 0` berarti tanpa batas jumlah pilihan yang tersedia; nilai 1 berarti pilih satu dan nilai positif lain adalah batas maksimal. Tidak memerlukan perubahan skema database.
+
+Saat mengedit **Maksimal dipilih**, kolom boleh kosong sementara tanpa mengaktifkan **gaada maksimalnya** atau mengunci input. Kolom wajib diisi angka bulat 2–30 ketika batas maksimal aktif. Nilai kosong, 0, atau 1 yang diketik tidak mengubah mode dan harus diperbaiki sebelum menu disimpan; gunakan checkbox untuk tanpa batas atau **Cara memilih** untuk pilih satu.

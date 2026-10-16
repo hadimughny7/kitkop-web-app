@@ -61,10 +61,11 @@ export default function MenuOptionsEditor({ groups, onChange, materials = [], di
         <div className="inline-option-heading">
           <label className="option-notes">Nama opsi<input className="form-input" maxLength={100} required value={group.name} placeholder="Misalnya: Penyajian atau Tambahan" onChange={(e) => patch(index, { name: e.target.value })} /></label>
         </div>
+        {/* Keep input drafts as text; only the explicit mode controls write numeric 0 or 1. */}
         <div className="option-admin-grid">
           <label>Cara memilih<select className="form-select" value={group.max_choices === 1 ? 'single' : 'multiple'} onChange={(e) => patch(index, { max_choices: e.target.value === 'single' ? 1 : 0, min_choices: Math.min(group.min_choices, 1) })}><option value="single">Pilih satu</option><option value="multiple">Boleh pilih beberapa</option></select></label>
           {group.max_choices !== 1 && <div className="option-limit-controls">
-            <label className="option-limit-number">Maksimal dipilih<input className="form-input" type="number" min={Math.max(2, group.min_choices)} max={30} required={group.max_choices > 0} disabled={group.max_choices === 0} placeholder="—" value={group.max_choices === 0 ? '' : group.max_choices} onChange={(e) => patch(index, { max_choices: Number(e.target.value) })} /></label>
+            <label className="option-limit-number">Maksimal dipilih<input className="form-input" type="number" min={Math.max(2, group.min_choices)} max={30} required={group.max_choices !== 0} disabled={group.max_choices === 0} placeholder="—" value={group.max_choices === 0 ? '' : group.max_choices} onChange={(e) => patch(index, { max_choices: e.target.value })} /></label>
             <label className="option-limit-unlimited"><input type="checkbox" checked={group.max_choices === 0} onChange={(e) => patch(index, { max_choices: e.target.checked ? 0 : Math.max(2, group.min_choices) })} /><span>gaada maksimalnya</span></label>
           </div>}
         </div>
