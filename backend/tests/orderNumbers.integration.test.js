@@ -110,7 +110,12 @@ test('concurrent orders have unique numbers, correct contents and atomic retry/r
 
     // Failure after allocation rolls back the counter and all order side effects.
     const beforeEvents = events.length;
-    const invalid = await post({ ...payload(), table_id: 2147483647 });
+    // Unknown tables are rejected before allocation; force a later SQL failure instead.
+    await sequelize.query("CREATE TRIGGER order_number_test_failure BEFORE INSERT ON order_items FOR EACH ROW BEGIN IF NEW.notes = 'FAIL-ORDER-NUMBER-TEST' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'intentional order item failure'; END IF; END");
+    const failingPayload = payload(); failingPayload.items[0].notes = 'FAIL-ORDER-NUMBER-TEST';
+    let invalid;
+    try { invalid = await post(failingPayload); }
+    finally { await sequelize.query('DROP TRIGGER order_number_test_failure'); }
     assert.equal(invalid.status, 500);
     assert.equal(Number((await OrderCounter.findByPk(dateKey)).last_sequence), 78);
     assert.equal(await Customer.count(), 36);

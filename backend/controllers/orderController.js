@@ -28,6 +28,20 @@ const createOrder = async (req, res, next, attempt = 0) => {
       return res.status(400).json({ success: false, message: 'Nama pelanggan wajib diisi.' });
     }
 
+    let selectedTableId = null;
+    if (table_id !== undefined && table_id !== null) {
+      const numericId = typeof table_id === 'number'
+        || (typeof table_id === 'string' && /^\d+$/.test(table_id.trim()));
+      selectedTableId = numericId ? Number(table_id) : NaN;
+      if (!Number.isInteger(selectedTableId) || selectedTableId < 1 || selectedTableId > 2147483647) {
+        fail('ID meja tidak valid.');
+      }
+      // Shared locks allow concurrent orders but serialize against table deactivation.
+      const table = await Table.findByPk(selectedTableId, { transaction: t, lock: t.LOCK.SHARE });
+      if (!table) fail('Meja tidak ditemukan.', 404);
+      if (Number(table.is_active) !== 1) fail('Meja tidak aktif. Silakan pilih meja lain atau hubungi kasir.', 409);
+    }
+
     // Create or find customer
     let customer;
     if (customer_phone) {
@@ -140,7 +154,7 @@ const createOrder = async (req, res, next, attempt = 0) => {
     // Create order
     const order_number = await allocateOrderNumber(t, { resync: attempt > 0 });
     const order = await Order.create({
-      table_id: table_id || null,
+      table_id: selectedTableId,
       customer_id: customer.id,
       cashier_id: assignedCashierId,
       order_number,
