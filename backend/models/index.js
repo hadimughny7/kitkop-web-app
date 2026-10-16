@@ -6,6 +6,7 @@ const Menu = require('./Menu');
 const RawMaterial = require('./RawMaterial');
 const MenuRecipe = require('./MenuRecipe');
 const Order = require('./Order');
+const OrderCounter = require('./OrderCounter');
 const OrderItem = require('./OrderItem');
 const OrderStatusLog = require('./OrderStatusLog');
 const Transaction = require('./Transaction');
@@ -81,6 +82,7 @@ module.exports = {
   RawMaterial,
   MenuRecipe,
   Order,
+  OrderCounter,
   OrderItem,
   OrderStatusLog,
   Transaction,

@@ -5,36 +5,16 @@ const { sequelize } = require('../config/database');
 const { refundStockForOrderItem } = require('./stockController');
 const { assertOrderPaid, getProductionOrder } = require('../services/orderProduction');
 
-/**
- * Generate unique order number: ORD-YYYYMMDD-XXXX
- */
-const generateOrderNumber = async () => {
-  const today = new Date();
-  const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
-  const prefix = `ORD-${dateStr}-`;
-
-  const lastOrder = await Order.findOne({
-    where: { order_number: { [Op.like]: `${prefix}%` } },
-    order: [['order_number', 'DESC']],
-  });
-
-  let sequence = 1;
-  if (lastOrder) {
-    const lastSeq = parseInt(lastOrder.order_number.split('-').pop(), 10);
-    sequence = lastSeq + 1;
-  }
-
-  return `${prefix}${String(sequence).padStart(4, '0')}`;
-};
+const { allocateOrderNumber, isRetryableOrderError } = require('../services/orderNumbers');
 
 /**
  * POST /api/orders
  * Create new order (customer QR or kasir)
  */
-const createOrder = async (req, res, next) => {
-  const t = await sequelize.transaction();
-
+const createOrder = async (req, res, next, attempt = 0) => {
+  let t;
   try {
+    t = await sequelize.transaction();
     const { table_id, customer_name, customer_phone, customer_email, items, order_type } = req.body;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -52,7 +32,8 @@ const createOrder = async (req, res, next) => {
     if (customer_phone) {
       customer = await Customer.findOne({
         where: { phone: customer_phone },
-      }, { transaction: t });
+        transaction: t,
+      });
     }
 
     if (!customer) {
@@ -123,15 +104,14 @@ const createOrder = async (req, res, next) => {
     }
 
     // Fetch tax & service charge percentages from settings
-    const taxSetting = await Setting.findByPk('tax_percentage');
-    const serviceSetting = await Setting.findByPk('service_charge_percentage');
+    const taxSetting = await Setting.findByPk('tax_percentage', { transaction: t });
+    const serviceSetting = await Setting.findByPk('service_charge_percentage', { transaction: t });
     const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
     const serviceRate = serviceSetting ? parseFloat(serviceSetting.value) / 100 : 0;
 
     const tax = Math.round(subtotal * taxRate);
     const service_charge = Math.round(subtotal * serviceRate);
     const total = subtotal + tax + service_charge;
-    const order_number = await generateOrderNumber();
 
     const hasFood = orderItems.some(i => i.item_type === 'makanan' || i.item_type === 'snack');
     const hasDrink = orderItems.some(i => i.item_type === 'minuman');
@@ -140,14 +120,15 @@ const createOrder = async (req, res, next) => {
     let assignedCashierId = req.user ? req.user.id : null;
     if (!assignedCashierId) {
       // Find active kasir
-      let activeCashier = await User.findOne({ where: { role: 'kasir', is_active: true } });
+      let activeCashier = await User.findOne({ where: { role: 'kasir', is_active: true }, transaction: t });
       if (!activeCashier) {
         // Fallback to manajer or owner
         activeCashier = await User.findOne({
           where: {
             role: { [Op.in]: ['manajer', 'owner'] },
             is_active: true
-          }
+          },
+          transaction: t,
         });
       }
       if (activeCashier) {
@@ -156,6 +137,7 @@ const createOrder = async (req, res, next) => {
     }
 
     // Create order
+    const order_number = await allocateOrderNumber(t, { resync: attempt > 0 });
     const order = await Order.create({
       table_id: table_id || null,
       customer_id: customer.id,
@@ -208,7 +190,12 @@ const createOrder = async (req, res, next) => {
       data: completeOrder,
     });
   } catch (error) {
-    await t.rollback();
+    const committed = t?.finished === 'commit';
+    if (t && !t.finished) await t.rollback();
+    // Retry the entire transaction so failed attempts leave no customer/items/logs.
+    if (!committed && attempt < 3 && isRetryableOrderError(error)) {
+      return createOrder(req, res, next, attempt + 1);
+    }
     next(error);
   }
 };

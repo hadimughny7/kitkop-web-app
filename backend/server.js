@@ -83,6 +83,8 @@ const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
   await testConnection();
+  // Required for safe order creation. Do not accept traffic if this migration fails.
+  await require('./migrations/add-order-counters')();
 
   // Auto-migrate: create settings table & add service_charge column
   try {
