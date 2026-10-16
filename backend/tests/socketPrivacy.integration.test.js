@@ -15,10 +15,8 @@ test('real sockets authenticate staff, isolate customer orders and minimize payl
   const sockets = []; let server, io;
   try {
     await sequelize.sync();
-    // Existing hosting supports barista; avoid silently changing the unrelated role-model finding.
-    await sequelize.query("ALTER TABLE users MODIFY role ENUM('owner','manajer','kasir','kitchen','barista') NOT NULL");
     const users = {};
-    for (const role of STAFF_ROLES) users[role] = await User.create({ name: role, username: role, email: `${role}@example.test`, role, password_hash: 'test' }, { validate: false });
+    for (const role of STAFF_ROLES) users[role] = await User.create({ name: role, username: role, email: `${role}@example.test`, role, password_hash: 'test' });
     const inactive = await User.create({ name: 'Inactive', username: 'inactive', email: 'inactive@example.test', role: 'kasir', password_hash: 'test', is_active: 0 });
     const category = await MenuCategory.create({ name: 'Test' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi', price: 10000 });

@@ -49,7 +49,7 @@ const UserManagement = () => {
     catch (err) { toast.error(err.response?.data?.message || 'Gagal menghapus.'); }
   };
 
-  const roleColors = { owner: 'badge-primary', manajer: 'badge-info', kasir: 'badge-success', kitchen: 'badge-danger' };
+  const roleColors = { owner: 'badge-primary', manajer: 'badge-info', kasir: 'badge-success', kitchen: 'badge-danger', barista: 'badge-info' };
 
   if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
 
@@ -120,6 +120,7 @@ const UserManagement = () => {
                   <label className="form-label">Role</label>
                   <select className="form-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                     <option value="kasir">Kasir</option>
+                    <option value="barista">Barista</option>
                     <option value="kitchen">Dapur</option>
                     <option value="manajer">Manajer</option>
                     <option value="owner">Owner</option>

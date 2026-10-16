@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const { User } = require('../models');
 const { Op } = require('sequelize');
 const { userRoom } = require('../socket/realtimeEvents');
+const { STAFF_ROLES } = require('../constants/roles');
 
 /**
  * GET /api/users
@@ -80,7 +81,7 @@ const createUser = async (req, res, next) => {
       });
     }
 
-    const validRoles = ['kasir', 'barista', 'kitchen', 'manajer', 'owner'];
+    const validRoles = STAFF_ROLES;
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
@@ -145,6 +146,13 @@ const updateUser = async (req, res, next) => {
     }
 
     const { name, email, username, password, role, is_active } = req.body;
+
+    if (role !== undefined && !STAFF_ROLES.includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: `Role tidak valid. Pilih: ${STAFF_ROLES.join(', ')}`,
+      });
+    }
 
     // Check email/username uniqueness if changed
     if (email && email !== user.email) {

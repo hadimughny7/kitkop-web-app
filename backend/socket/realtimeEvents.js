@@ -1,4 +1,4 @@
-const STAFF_ROLES = ['owner', 'manajer', 'kasir', 'kitchen', 'barista'];
+const { STAFF_ROLES } = require('../constants/roles');
 const roleRoom = role => `staff-role:${role}`;
 const userRoom = id => `staff-user:${id}`;
 const orderRoom = id => `customer-order:${id}`;

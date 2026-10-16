@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { STAFF_ROLES } = require('../constants/roles');
 
 const User = sequelize.define('User', {
   id: {
@@ -27,8 +28,9 @@ const User = sequelize.define('User', {
     allowNull: false,
   },
   role: {
-    type: DataTypes.ENUM('kasir', 'kitchen', 'manajer', 'owner'),
+    type: DataTypes.ENUM(...STAFF_ROLES),
     allowNull: false,
+    validate: { isIn: [STAFF_ROLES] },
   },
   is_active: {
     type: DataTypes.TINYINT,

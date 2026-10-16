@@ -10,6 +10,7 @@
     "migrate:menu-options": "node migrations/add-menu-options.js",
     "migrate:order-counters": "node migrations/add-order-counters.js",
     "migrate:qris-attempts": "node migrations/add-qris-attempts.js",
+    "migrate:staff-roles": "node migrations/add-barista-role.js",
     "migrate:recipe-quantities": "node migrations/validate-recipe-quantities.js"
   },
   "dependencies": {
