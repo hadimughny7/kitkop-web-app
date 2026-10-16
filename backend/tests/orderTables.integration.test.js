@@ -46,6 +46,63 @@ test('new orders require an existing active table when a table is supplied', { s
       counters: (await OrderCounter.findAll({ order: [['date_key', 'ASC']] })).map(row => row.toJSON()), events: events.length,
     });
 
+    await t.test('new and renamed table links use the welcome route and configured frontend URL', async () => {
+      const originalClientUrl = process.env.CLIENT_URL;
+      try {
+        delete process.env.CLIENT_URL;
+        const created = await request('/tables', 'POST', { table_number: 'QR1', capacity: 6 }, true);
+        assert.equal(created.status, 201, JSON.stringify(created));
+        assert.equal(created.body.data.qr_code_url, 'http://localhost:5173/order/welcome?table=QR1');
+        assert.equal((await Table.findByPk(created.body.data.id)).qr_code_url, created.body.data.qr_code_url);
+        process.env.CLIENT_URL = 'https://order.example.test/';
+        const updated = await request(`/tables/${created.body.data.id}`, 'PUT', { table_number: 'QR2', capacity: 8 }, true);
+        assert.equal(updated.status, 200);
+        assert.equal(updated.body.data.qr_code_url, 'https://order.example.test/order/welcome?table=QR2');
+        assert.equal(updated.body.data.capacity, 8);
+        assert.equal((await Table.findByPk(created.body.data.id)).qr_code_url, updated.body.data.qr_code_url);
+      } finally {
+        if (originalClientUrl === undefined) delete process.env.CLIENT_URL;
+        else process.env.CLIENT_URL = originalClientUrl;
+      }
+    });
+
+    await t.test('list and detail responses repair legacy or missing links without writing during reads', async () => {
+      const originalClientUrl = process.env.CLIENT_URL;
+      try {
+        process.env.CLIENT_URL = 'https://order.example.test';
+        for (const [number, stored] of [['OLD', 'http://localhost:5173/order?table=OLD'], ['NULL', null]]) {
+          const table = await Table.create({ table_number: number, qr_code_url: stored, capacity: 5 });
+          const expected = `https://order.example.test/order/welcome?table=${number}`;
+          const all = await request('/tables', 'GET', undefined, true);
+          assert.equal(all.status, 200);
+          assert.equal(all.body.data.find(row => row.id === table.id).qr_code_url, expected);
+          const byId = await request(`/tables/${table.id}`, 'GET', undefined, true);
+          assert.equal(byId.status, 200); assert.equal(byId.body.data.qr_code_url, expected);
+          const byNumber = await request(`/tables/by-number/${number}`, 'GET');
+          assert.equal(byNumber.status, 200); assert.equal(byNumber.body.data.qr_code_url, expected);
+          assert.equal((await table.reload()).qr_code_url, stored);
+          const updated = await request(`/tables/${table.id}`, 'PUT', { capacity: 7 }, true);
+          assert.equal(updated.status, 200); assert.equal(updated.body.data.qr_code_url, expected);
+          assert.equal((await table.reload()).qr_code_url, expected);
+        }
+      } finally {
+        if (originalClientUrl === undefined) delete process.env.CLIENT_URL;
+        else process.env.CLIENT_URL = originalClientUrl;
+      }
+    });
+
+    await t.test('table query values survive spaces and reserved URL characters', async () => {
+      const number = 'A &#+?';
+      const created = await request('/tables', 'POST', { table_number: number }, true);
+      assert.equal(created.status, 201, JSON.stringify(created));
+      const link = new URL(created.body.data.qr_code_url);
+      assert.equal(link.pathname, '/order/welcome');
+      assert.equal(link.searchParams.get('table'), number);
+      assert.equal([...link.searchParams].length, 1); assert.equal(link.hash, '');
+      const scanned = await request(`/tables/by-number/${encodeURIComponent(link.searchParams.get('table'))}`, 'GET');
+      assert.equal(scanned.status, 200); assert.equal(scanned.body.data.id, created.body.data.id);
+    });
+
     await t.test('inactive and nonexistent tables reject QR and POS requests without side effects', async () => {
       const before = await snapshot();
       for (const staff of [false, true]) {

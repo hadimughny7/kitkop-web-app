@@ -1,5 +1,13 @@
 const { Table } = require('../models');
 
+const tableOrderUrl = tableNumber => {
+  const clientUrl = (process.env.CLIENT_URL || 'http://localhost:5173').replace(/\/+$/, '');
+  return `${clientUrl}/order/welcome?table=${encodeURIComponent(tableNumber)}`;
+};
+
+// Derive response URLs so legacy/null stored links also use the current route.
+const tableData = table => ({ ...table.toJSON(), qr_code_url: tableOrderUrl(table.table_number) });
+
 /**
  * GET /api/tables
  */
@@ -8,7 +16,7 @@ const getTables = async (req, res, next) => {
     const tables = await Table.findAll({
       order: [['table_number', 'ASC']],
     });
-    res.json({ success: true, data: tables });
+    res.json({ success: true, data: tables.map(tableData) });
   } catch (error) {
     next(error);
   }
@@ -23,7 +31,7 @@ const getTableById = async (req, res, next) => {
     if (!table) {
       return res.status(404).json({ success: false, message: 'Meja tidak ditemukan.' });
     }
-    res.json({ success: true, data: table });
+    res.json({ success: true, data: tableData(table) });
   } catch (error) {
     next(error);
   }
@@ -44,7 +52,7 @@ const getTableByNumber = async (req, res, next) => {
     if (!table.is_active) {
       return res.status(400).json({ success: false, message: 'Meja tidak aktif.' });
     }
-    res.json({ success: true, data: table });
+    res.json({ success: true, data: tableData(table) });
   } catch (error) {
     next(error);
   }
@@ -53,7 +61,7 @@ const getTableByNumber = async (req, res, next) => {
 /**
  * POST /api/tables
  */
-  const createTable = async (req, res, next) => {
+const createTable = async (req, res, next) => {
   try {
     const { table_number, capacity } = req.body;
     if (!table_number) {
@@ -61,11 +69,10 @@ const getTableByNumber = async (req, res, next) => {
     }
 
     // Generate QR code URL
-    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-    const qr_code_url = `${clientUrl}/order?table=${table_number}`;
+    const qr_code_url = tableOrderUrl(table_number);
 
     const table = await Table.create({ table_number, qr_code_url, capacity: capacity || 4 });
-    res.status(201).json({ success: true, message: 'Meja berhasil ditambahkan.', data: table });
+    res.status(201).json({ success: true, message: 'Meja berhasil ditambahkan.', data: tableData(table) });
   } catch (error) {
     next(error);
   }
@@ -84,14 +91,13 @@ const updateTable = async (req, res, next) => {
     const { table_number, is_active, capacity } = req.body;
     if (table_number) {
       table.table_number = table_number;
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-      table.qr_code_url = `${clientUrl}/order?table=${table_number}`;
     }
+    table.qr_code_url = tableOrderUrl(table.table_number);
     if (is_active !== undefined) table.is_active = is_active;
     if (capacity !== undefined) table.capacity = capacity;
 
     await table.save();
-    res.json({ success: true, message: 'Meja berhasil diperbarui.', data: table });
+    res.json({ success: true, message: 'Meja berhasil diperbarui.', data: tableData(table) });
   } catch (error) {
     next(error);
   }
