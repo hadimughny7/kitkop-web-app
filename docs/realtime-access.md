@@ -32,6 +32,14 @@ Tautan lama atau tab/perangkat tanpa token tidak dapat membuka detail hanya deng
 
 Backend dan frontend perlu dideploy bersama agar klien mengirim kredensial yang diperlukan. Tidak ada migrasi database tambahan untuk pengamanan tracking. Role Barista sudah disamakan pada model, API, dan UI melalui perbaikan F02.
 
+## Identitas pemesan tamu
+
+`POST /api/orders` membuat record `Customer` terpisah untuk setiap pesanan QR maupun kasir dalam transaksi database yang sama dengan order. Nama wajib; telepon dan email tetap opsional. Telepon/email yang diketik belum diverifikasi dan tidak dipakai untuk mencari, memakai ulang, atau memperbarui profil lama, termasuk saat kontak sama persis atau memakai Pesan Lagi.
+
+Respons pembuatan pesanan hanya mengembalikan nama, telepon, dan email yang dikirim untuk pesanan tersebut pada objek `customer`; kontak kosong disimpan sebagai `null`. Respons tracking tetap mengikuti batas field dan token di atas. Detail pelanggan untuk staf tetap tersedia melalui endpoint dashboard yang memerlukan login.
+
+Tidak ada migrasi atau perubahan data historis: pesanan lama tetap menunjuk record sebelumnya dan tidak dapat ditimpa oleh pemesanan baru dengan nomor telepon yang sama. Perubahan identitas yang sudah terjadi sebelum perbaikan tidak dipulihkan otomatis. Tabel `customers` merupakan penyimpanan identitas pemesan, bukan direktori akun terverifikasi atau hitungan pelanggan unik berdasarkan nomor telepon.
+
 ## Pengujian
 
 Setelah dependency backend dan frontend tersedia, jalankan dari `backend`:

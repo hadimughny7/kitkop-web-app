@@ -44,29 +44,13 @@ const createOrder = async (req, res, next, attempt = 0) => {
       if (Number(table.is_active) !== 1) fail('Meja tidak aktif. Silakan pilih meja lain atau hubungi kasir.', 409);
     }
 
-    // Create or find customer
-    let customer;
-    if (customer_phone) {
-      customer = await Customer.findOne({
-        where: { phone: customer_phone },
-        transaction: t,
-      });
-    }
-
-    if (!customer) {
-      customer = await Customer.create({
-        name: customer_name,
-        phone: customer_phone || null,
-        email: customer_email || null,
-      }, { transaction: t });
-    } else {
-      // Update name if different
-      if (customer.name !== customer_name) {
-        customer.name = customer_name;
-        if (customer_email) customer.email = customer_email;
-        await customer.save({ transaction: t });
-      }
-    }
+    // Guest contact details are unverified: keep a separate identity per order.
+    // Matching a phone/email must never read or overwrite another order's customer.
+    const customer = await Customer.create({
+      name: customer_name,
+      phone: customer_phone || null,
+      email: customer_email || null,
+    }, { transaction: t });
 
     // Calculate totals
     let subtotal = 0;
@@ -190,7 +174,7 @@ const createOrder = async (req, res, next, attempt = 0) => {
     const completeOrder = await Order.findByPk(order.id, {
       include: [
         { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
-        { model: Customer, as: 'customer' },
+        { model: Customer, as: 'customer', attributes: ['name', 'phone', 'email'] },
         { model: Table, as: 'table' },
         { model: User, as: 'cashier', attributes: ['id', 'name'] },
       ],
