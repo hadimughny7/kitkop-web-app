@@ -23,6 +23,7 @@ const OrderStatusPage = () => {
   const navigate = useNavigate();
   const { tableNumber, clearCart, setTableNumber, setTableId, setCustomerInfo } = useCart();
   const [order, setOrder] = useState(null);
+  const [orderError, setOrderError] = useState('');
   const [payment, setPayment] = useState(null);
   const [paymentError, setPaymentError] = useState('');
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -35,7 +36,7 @@ const OrderStatusPage = () => {
   useEffect(() => {
     loadOrder();
     const socket = createOrderSocket(orderNumber, getOrderTrackingToken(orderNumber));
-    if (!socket) return; // Existing links without a checkout token use HTTP polling.
+    if (!socket) return; // HTTP tracking also requires the checkout token.
     socket.on('connect', loadOrder);
 
     socket.on('order-status-update', () => {
@@ -62,7 +63,7 @@ const OrderStatusPage = () => {
     }
   }, [order]);
 
-  // Covers missed events and old links without a per-order realtime token.
+  // Authenticated polling covers missed realtime events.
   useEffect(() => {
     if (!order || ['completed', 'cancelled'].includes(order.status)) return;
 
@@ -109,8 +110,12 @@ const OrderStatusPage = () => {
     try {
       const res = await orderAPI.track(orderNumber);
       setOrder(res.data.data);
+      setOrderError('');
     } catch (err) {
-      console.error('Failed to load order:', err);
+      setOrder(null);
+      setOrderError(err.response?.status === 403
+        ? 'Akses pesanan tidak tersedia. Buka dari tab tempat Anda membuat pesanan atau hubungi kasir.'
+        : err.response?.status === 404 ? 'Pesanan tidak ditemukan.' : 'Status pesanan belum dapat dimuat. Silakan coba lagi.');
     } finally {
       setLoading(false);
     }
@@ -221,9 +226,11 @@ const OrderStatusPage = () => {
     return (
       <div className="customer-page">
         <div className="customer-container">
-          <div className="error-card">
+          <div className="error-card" role="alert">
             <HiOutlineExclamation className="error-icon" aria-hidden="true" />
-            <h2>Pesanan Tidak Ditemukan</h2>
+            <h2>Status pesanan tidak tersedia</h2>
+            <p>{orderError}</p>
+            <button className="btn btn-secondary" onClick={loadOrder}>Coba lagi</button>
           </div>
         </div>
       </div>

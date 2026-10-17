@@ -24,9 +24,13 @@ Koneksi diputus saat token kedaluwarsa. Perubahan role/status aktif/password ata
 
 Frontend menyimpan token pelacakan per order dalam `sessionStorage`, tidak memasukkannya ke URL atau broadcast. Token bertahan ketika halaman di-refresh dalam sesi tab yang sama. Pelanggan tidak perlu login. Token tidak diterbitkan ulang melalui endpoint HTTP pelacakan publik.
 
-Tautan lama, tab lain tanpa token, storage yang tidak tersedia, serta event yang terlewat memakai polling HTTP setiap lima detik selama order masih aktif. Halaman status dan tombol Pesan Lagi tetap berfungsi. Kontrak serta otorisasi endpoint HTTP lama tidak diubah oleh perbaikan F14 ini: endpoint pelacakan HTTP berdasarkan nomor order tetap publik. Pembatasan Socket.IO tidak menjadi pengganti pengamanan endpoint HTTP tersebut.
+HTTP tracking juga memerlukan token checkout melalui header `X-Order-Tracking-Token` pada `GET /api/orders/track/:orderNumber`. Backend memverifikasi signature HS256, audience, masa berlaku, nomor order, dan ID order. Token kosong/rusak/kedaluwarsa/milik pesanan lain ditolak HTTP 403; token yang valid tetapi pasangan ID/nomor tidak ditemukan mendapat 404. Semua respons tracking memakai `Cache-Control: no-store`. Token tidak diterbitkan ulang dari nomor pesanan dan JWT login staf tidak menggantikan token tracking; staf menggunakan endpoint detail pesanan di dashboard.
 
-Backend dan frontend perlu dideploy bersama agar klien staf mengirim kredensial handshake yang baru. Tidak ada migrasi database tambahan. Ketidaksesuaian role barista pada model database baru merupakan temuan terpisah (F02); pengujian socket barista menyesuaikan enum hanya pada schema uji.
+Polling lima detik untuk event terlewat mengirim token yang sama. Respons tracking hanya berisi status, waktu, nominal, item, meja, serta nama/telepon untuk mengisi kembali Pesan Lagi. Email, ID pelanggan/kasir, identitas staf, log internal, resep/stok, dan referensi transaksi tidak dikirim. Pesan Lagi dan refresh dalam tab pemesanan tetap didukung.
+
+Tautan lama atau tab/perangkat tanpa token tidak dapat membuka detail hanya dengan nomor pesanan. Halaman menampilkan petunjuk menggunakan tab asal atau menghubungi kasir. Jika sessionStorage diblokir, token disimpan dalam memori agar checkout saat ini tetap berjalan; refresh dalam kondisi tersebut memerlukan bantuan kasir. Token berlaku tujuh hari dan tidak diperpanjang melalui endpoint tracking.
+
+Backend dan frontend perlu dideploy bersama agar klien mengirim kredensial yang diperlukan. Tidak ada migrasi database tambahan untuk pengamanan tracking. Role Barista sudah disamakan pada model, API, dan UI melalui perbaikan F02.
 
 ## Pengujian
 

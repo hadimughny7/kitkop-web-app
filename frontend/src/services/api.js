@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { rememberOrderTracking } from './orderTracking';
+import { rememberOrderTracking, getOrderTrackingToken } from './orderTracking';
 
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const API_BASE_URL = `${BACKEND_URL}/api`;
@@ -107,7 +107,9 @@ export const orderAPI = {
   },
   getAll: (params) => api.get('/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),
-  track: (orderNumber) => api.get(`/orders/track/${orderNumber}`),
+  track: (orderNumber) => api.get(`/orders/track/${encodeURIComponent(orderNumber)}`, {
+    headers: { 'X-Order-Tracking-Token': getOrderTrackingToken(orderNumber) || '' },
+  }),
   updateStatus: (id, status) => api.patch(`/orders/${id}/status`, { status }),
   updateStationStatus: (id, data) => api.patch(`/orders/${id}/station-status`, data),
   rejectItem: (orderId, itemId) => api.patch(`/orders/${orderId}/items/${itemId}/reject`),

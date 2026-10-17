@@ -108,7 +108,7 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     assert.equal(Number(order.total), 48400);
     assert.equal(Number((await material.reload()).stock), 1000);
     await call(`/option-groups/${group.id}`, 'PUT', { ...definition, choices: [{ ...definition.choices[0], name: 'Ice baru', price: 9000, ingredients: [{ raw_material_id: material.id, quantity_used: 90 }] }, definition.choices[1]] });
-    const tracked = await call(`/orders/track/${order.order_number}`, 'GET', undefined, null);
+    const tracked = await call(`/orders/track/${order.order_number}`, 'GET', undefined, null, 200, { 'X-Order-Tracking-Token': order.tracking_token });
     assert.equal(tracked.items[0].selected_options[0].name, 'Ice');
     assert.equal('stock_usage' in tracked.items[0], false);
     assert.equal(Number(tracked.items[0].price), 22000);
@@ -228,7 +228,7 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     assert.deepEqual((await call(`/menus/${direct.id}`)).optionGroups, []);
     assert.equal(await OptionGroup.count({ where: { id: directGroups[0].id } }), 0);
     // Existing order snapshots survive option removal.
-    assert.equal((await call(`/orders/track/${order.order_number}`, 'GET', undefined, null)).items[0].selected_options[0].name, 'Ice');
+    assert.equal((await call(`/orders/track/${order.order_number}`, 'GET', undefined, null, 200, { 'X-Order-Tracking-Token': order.tracking_token })).items[0].selected_options[0].name, 'Ice');
     await migrate();
     assert.equal((await call('/option-templates')).some((t) => t.id === savedTemplate.id), false, 'rerunning the migration preserves deletion');
   } finally {

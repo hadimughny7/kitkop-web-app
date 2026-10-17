@@ -34,8 +34,8 @@ test('real sockets authenticate staff, isolate customer orders and minimize payl
       socket.once('connect', () => resolve(socket));
       socket.once('connect_error', error => { socket.disconnect(); reject(error); }); socket.connect();
     });
-    const request = async (path, method = 'POST', body, expected = 200) => {
-      const response = await fetch(base + '/api' + path, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token(users.owner)}` }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const request = async (path, method = 'POST', body, expected = 200, extraHeaders = {}) => {
+      const response = await fetch(base + '/api' + path, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token(users.owner)}`, ...extraHeaders }, body: body === undefined ? undefined : JSON.stringify(body) });
       const result = await response.json(); assert.equal(response.status, expected, JSON.stringify(result)); return result.data;
     };
     const createOrder = name => request('/orders', 'POST', { customer_name: `Private ${name}`, customer_phone: `081-${name}`, customer_email: `${name}@example.test`, items: [{ menu_id: menu.id, qty: 1 }] }, 201);
@@ -56,7 +56,8 @@ test('real sockets authenticate staff, isolate customer orders and minimize payl
         { orderNumber: a.order_number, trackingToken: 'bad' },
         { orderNumber: a.order_number, trackingToken: jwt.sign({ orderNumber: a.order_number }, process.env.JWT_SECRET, { subject: String(a.id), audience: 'wrong', expiresIn: '1h' }) },
       ]) await assert.rejects(connect(auth), error => error.data?.code === 'UNAUTHORIZED');
-      assert.equal((await request(`/orders/track/${a.order_number}`, 'GET')).tracking_token, undefined, 'public tracking must never issue a realtime capability');
+      await request(`/orders/track/${a.order_number}`, 'GET', undefined, 403);
+      assert.equal((await request(`/orders/track/${a.order_number}`, 'GET', undefined, 200, { 'X-Order-Tracking-Token': a.tracking_token })).tracking_token, undefined, 'tracking must never issue a new capability');
     });
 
     await t.test('client-selected role/room names never grant membership', async () => {

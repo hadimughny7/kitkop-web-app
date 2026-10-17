@@ -306,14 +306,13 @@ const getOrderById = async (req, res, next) => {
 const trackOrder = async (req, res, next) => {
   try {
     const order = await Order.findOne({
-      where: { order_number: req.params.orderNumber },
+      where: { id: req.trackingOrderId, order_number: req.params.orderNumber },
+      attributes: ['id', 'order_number', 'table_id', 'status', 'subtotal', 'tax', 'service_charge', 'total', 'created_at'],
       include: [
-        { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'price', 'image'] }] },
+        { model: OrderItem, as: 'items', attributes: ['id', 'qty', 'price', 'selected_options', 'notes', 'item_type', 'status'], include: [{ model: Menu, as: 'menu', attributes: ['name'] }] },
+        // Name/phone restore the customer's details for Pesan Lagi after refresh.
         { model: Customer, as: 'customer', attributes: ['name', 'phone'] },
         { model: Table, as: 'table', attributes: ['table_number'] },
-        { model: Transaction, as: 'transaction', attributes: ['status', 'payment_method'] },
-        { model: OrderStatusLog, as: 'statusLogs', attributes: ['status', 'changed_at', 'notes'] },
-        { model: User, as: 'cashier', attributes: ['id', 'name'] },
       ],
     });
 

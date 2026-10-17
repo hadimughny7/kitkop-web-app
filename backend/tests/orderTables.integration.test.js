@@ -32,8 +32,8 @@ test('new orders require an existing active table when a table is supplied', { s
     app.use((err, req, res, next) => res.status(err.statusCode || 500).json({ message: err.message }));
     server = app.listen(0, '127.0.0.1'); await new Promise(resolve => server.once('listening', resolve));
     const jwt = require('jsonwebtoken');
-    const request = async (path, method = 'POST', body, staff = false) => {
-      const headers = { 'Content-Type': 'application/json' };
+    const request = async (path, method = 'POST', body, staff = false, extraHeaders = {}) => {
+      const headers = { 'Content-Type': 'application/json', ...extraHeaders };
       if (staff) headers.Authorization = `Bearer ${jwt.sign({ id: owner.id }, process.env.JWT_SECRET)}`;
       const response = await fetch(`http://127.0.0.1:${server.address().port}/api${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
       return { status: response.status, body: await response.json() };
@@ -151,7 +151,7 @@ test('new orders require an existing active table when a table is supplied', { s
       const before = await snapshot();
       assert.equal((await request('/orders', 'POST', payload(table.id))).status, 409);
       assert.deepEqual(await snapshot(), before);
-      assert.equal((await request(`/orders/track/${old.order_number}`, 'GET')).status, 200);
+      assert.equal((await request(`/orders/track/${old.order_number}`, 'GET', undefined, false, { 'X-Order-Tracking-Token': old.tracking_token })).status, 200);
       assert.equal((await request(`/payments/${old.id}/cash`, 'POST', {}, true)).status, 200);
       assert.equal((await request(`/orders/${old.id}/items/process-all`, 'PATCH', {}, true)).status, 200);
       assert.equal((await request(`/orders/${old.id}/items/complete-all`, 'PATCH', {}, true)).status, 200);
