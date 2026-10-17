@@ -3,6 +3,8 @@ const { User } = require('../models');
 const { Op } = require('sequelize');
 const { userRoom } = require('../socket/realtimeEvents');
 const { STAFF_ROLES } = require('../constants/roles');
+const { sequelize } = require('../config/database');
+const { revokeStaffSockets } = require('../services/staffSessions');
 
 /**
  * GET /api/users
@@ -24,7 +26,7 @@ const getUsers = async (req, res, next) => {
 
     const users = await User.findAll({
       where,
-      attributes: { exclude: ['password_hash'] },
+      attributes: { exclude: ['password_hash', 'session_version'] },
       include: [
         { model: User, as: 'creator', attributes: ['id', 'name'] },
       ],
@@ -47,7 +49,7 @@ const getUsers = async (req, res, next) => {
 const getUserById = async (req, res, next) => {
   try {
     const user = await User.findByPk(req.params.id, {
-      attributes: { exclude: ['password_hash'] },
+      attributes: { exclude: ['password_hash', 'session_version'] },
       include: [
         { model: User, as: 'creator', attributes: ['id', 'name'] },
       ],
@@ -183,10 +185,18 @@ const updateUser = async (req, res, next) => {
     if (is_active !== undefined) user.is_active = is_active;
     if (password) {
       user.password_hash = await bcrypt.hash(password, 10);
+      // Increment in the same UPDATE as the hash, using the current DB value.
+      // Concurrent password resets cannot lose an increment or revive a token.
+      user.session_version = sequelize.literal('session_version + 1');
     }
 
+    const accessChanged = user.changed('role') || user.changed('is_active');
     await user.save();
-    if (role !== undefined || is_active !== undefined || password) {
+    if (password) {
+      const current = await User.findByPk(user.id, { attributes: ['session_version'] });
+      await revokeStaffSockets(req.app.get('io'), user.id, current.session_version);
+    }
+    if (accessChanged) {
       req.app.get('io')?.in(userRoom(user.id)).disconnectSockets(true);
     }
 

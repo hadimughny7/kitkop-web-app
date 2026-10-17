@@ -12,7 +12,8 @@
     "migrate:qris-attempts": "node migrations/add-qris-attempts.js",
     "migrate:staff-roles": "node migrations/add-barista-role.js",
     "migrate:recipe-quantities": "node migrations/validate-recipe-quantities.js",
-    "migrate:menu-prices": "node migrations/validate-menu-prices.js"
+    "migrate:menu-prices": "node migrations/validate-menu-prices.js",
+    "migrate:staff-sessions": "node migrations/add-session-versions.js"
   },
   "dependencies": {
     "axios": "^1.7.2",

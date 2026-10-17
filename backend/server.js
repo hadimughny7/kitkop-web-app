@@ -85,6 +85,7 @@ const PORT = process.env.PORT || 5000;
 const startServer = async () => {
   await testConnection();
   await require('./migrations/add-barista-role')();
+  await require('./migrations/add-session-versions')();
   // Required for safe order creation. Do not accept traffic if this migration fails.
   await require('./migrations/add-order-counters')();
   await require('./migrations/add-qris-attempts')();

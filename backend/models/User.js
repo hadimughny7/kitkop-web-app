@@ -27,6 +27,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(255),
     allowNull: false,
   },
+  session_version: {
+    type: DataTypes.INTEGER.UNSIGNED,
+    allowNull: false,
+    defaultValue: 0,
+  },
   role: {
     type: DataTypes.ENUM(...STAFF_ROLES),
     allowNull: false,

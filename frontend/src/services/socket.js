@@ -8,7 +8,19 @@ export const disconnectStaffSockets = () => {
 };
 
 export const createStaffSocket = () => {
-  const socket = io(BACKEND_URL, { auth: callback => callback({ token: localStorage.getItem('kitkop_token') }) });
+  let sessionToken;
+  const socket = io(BACKEND_URL, { auth: callback => {
+    sessionToken = localStorage.getItem('kitkop_token');
+    callback({ token: sessionToken });
+  } });
+  const sessionRevoked = () => {
+    window.dispatchEvent(new CustomEvent('kitkop:session-revoked', { detail: { token: sessionToken } }));
+    socket.disconnect();
+  };
+  socket.on('session-revoked', sessionRevoked);
+  socket.on('connect_error', error => {
+    if (error.data?.code === 'SESSION_REVOKED') sessionRevoked();
+  });
   staffSockets.add(socket);
   socket.on('disconnect', () => { if (!socket.active) staffSockets.delete(socket); });
   return socket;
@@ -19,5 +31,5 @@ export const createOrderSocket = (orderNumber, trackingToken) => trackingToken
 
 // Logging out in another tab must stop that tab's staff event subscriptions too.
 window.addEventListener('storage', event => {
-  if (event.key === 'kitkop_token' && !event.newValue) disconnectStaffSockets();
+  if (event.key === 'kitkop_token' && !event.newValue && !localStorage.getItem('kitkop_token')) disconnectStaffSockets();
 });

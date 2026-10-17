@@ -2,7 +2,7 @@
 
 Koneksi realtime memerlukan salah satu kredensial berikut pada handshake `auth`:
 
-- Staf: `{ token }`, menggunakan JWT login. Server memeriksa tanda tangan, masa berlaku, akun aktif, dan role dari database; klaim role klien tidak menentukan hak akses.
+- Staf: `{ token }`, menggunakan JWT login. Server memeriksa tanda tangan, masa berlaku, akun aktif, versi sesi, dan role dari database; klaim role klien tidak menentukan hak akses.
 - Pelanggan: `{ orderNumber, trackingToken }`. Token bertanda tangan diterbitkan hanya dalam respons pembuatan order, terikat pada ID dan nomor order, memiliki audience khusus, dan berlaku tujuh hari. Token tersebut bukan token login staf.
 
 Koneksi anonim, token rusak/kedaluwarsa, akun nonaktif/tidak ditemukan, serta token pelacakan untuk order lain ditolak. Server menentukan seluruh room; `join-room`, `join-role`, atau `track-order` dari klien tidak dapat memberikan akses tambahan.
@@ -18,7 +18,9 @@ Koneksi anonim, token rusak/kedaluwarsa, akun nonaktif/tidak ditemukan, serta to
 
 Pengiriman memakai satu helper dengan whitelist field. Tidak ada broadcast global untuk event aplikasi. Model ORM, nama, telepon, email, catatan pelanggan, detail item, referensi pembayaran, dan token pelacakan tidak disertakan dalam event tersebut. Room union mencegah pengiriman ganda kepada socket yang cocok dengan beberapa room.
 
-Koneksi diputus saat token kedaluwarsa. Perubahan role/status aktif/password atau penghapusan akun melalui API pengguna memutus socket akun tersebut. Logout frontend memutus seluruh socket staf yang dibuat aplikasi, termasuk logout melalui tab lain. Notifikasi pembayaran global tetap dipasang pada layout dashboard sehingga perpindahan halaman tidak menghilangkan notifikasi.
+Koneksi diputus saat token kedaluwarsa. Perubahan role/status aktif atau penghapusan akun melalui API pengguna memutus socket akun tersebut. Perubahan password menaikkan versi sesi secara atomik dan memutus seluruh sesi lama akun tersebut, termasuk akses HTTP dan koneksi ulang socket. Event privat `session-revoked` mengarahkan browser terkait ke login; sesi baru yang sudah memakai versi terbaru tetap aktif. Rincian migrasi dan kompatibilitas ada di [staff-sessions.md](staff-sessions.md).
+
+Logout frontend memutus seluruh socket staf yang dibuat aplikasi, termasuk logout melalui tab lain. Notifikasi pembayaran global tetap dipasang pada layout dashboard sehingga perpindahan halaman tidak menghilangkan notifikasi.
 
 ## Pelanggan dan kompatibilitas
 

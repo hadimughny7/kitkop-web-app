@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const { sessionMatches } = require('../services/staffSessions');
 
 /**
  * Verify JWT token from Authorization header
@@ -17,7 +18,8 @@ const verifyToken = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (!Number.isInteger(decoded.id) || decoded.aud) throw new Error('Invalid staff token');
 
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password_hash'] },
@@ -28,6 +30,10 @@ const verifyToken = async (req, res, next) => {
         success: false,
         message: 'Akun tidak valid atau sudah dinonaktifkan.',
       });
+    }
+
+    if (!sessionMatches(decoded, user)) {
+      return res.status(401).json({ success: false, code: 'SESSION_REVOKED', message: 'Sesi telah berakhir. Silakan login ulang.' });
     }
 
     req.user = user;
@@ -83,12 +89,16 @@ const optionalAuth = async (req, res, next) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+    if (!Number.isInteger(decoded.id) || decoded.aud) throw new Error('Invalid staff token');
 
     const user = await User.findByPk(decoded.id, {
       attributes: { exclude: ['password_hash'] },
     });
 
+    if (user && user.is_active && !sessionMatches(decoded, user)) {
+      return res.status(401).json({ success: false, code: 'SESSION_REVOKED', message: 'Sesi telah berakhir. Silakan login ulang.' });
+    }
     req.user = (user && user.is_active) ? user : null;
     next();
   } catch (error) {

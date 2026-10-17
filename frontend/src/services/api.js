@@ -24,7 +24,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const currentToken = localStorage.getItem('kitkop_token');
+    const requestToken = error.config?.headers?.Authorization;
+    if (error.response?.status === 401 && (!currentToken || requestToken === `Bearer ${currentToken}`)) {
       localStorage.removeItem('kitkop_token');
       localStorage.removeItem('kitkop_user');
       if (window.location.pathname.startsWith('/dashboard') || 

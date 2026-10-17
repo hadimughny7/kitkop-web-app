@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { userAPI } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch } from 'react-icons/hi';
 
 const UserManagement = () => {
+  const { user, logout } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -33,6 +35,11 @@ const UserManagement = () => {
         const data = { ...form };
         if (!data.password) delete data.password;
         await userAPI.update(editUser.id, data);
+        if (data.password && editUser.id === user.id) {
+          logout();
+          toast.success('Password diperbarui. Silakan login ulang.');
+          return;
+        }
         toast.success('Akun berhasil diperbarui.');
       } else {
         await userAPI.create(form);

@@ -16,13 +16,36 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const endSession = event => {
+      // A delayed event from an old socket must not sign out a new login.
+      if (!event.detail?.token || event.detail.token !== localStorage.getItem('kitkop_token')) return;
+      disconnectStaffSockets();
+      localStorage.removeItem('kitkop_token');
+      localStorage.removeItem('kitkop_user');
+      setToken(null);
+      setUser(null);
+    };
+    const syncLogout = event => {
+      if (event.key === 'kitkop_token' && !event.newValue && !localStorage.getItem('kitkop_token')) {
+        disconnectStaffSockets(); setToken(null); setUser(null);
+      }
+    };
+    window.addEventListener('kitkop:session-revoked', endSession);
+    window.addEventListener('storage', syncLogout);
+    return () => {
+      window.removeEventListener('kitkop:session-revoked', endSession);
+      window.removeEventListener('storage', syncLogout);
+    };
+  }, []);
+
+  useEffect(() => {
     const initAuth = async () => {
       if (token) {
         try {
           const res = await authAPI.getMe();
-          setUser(res.data.data);
+          if (localStorage.getItem('kitkop_token') === token) setUser(res.data.data);
         } catch {
-          logout();
+          if (localStorage.getItem('kitkop_token') === token) logout();
         }
       }
       setLoading(false);
