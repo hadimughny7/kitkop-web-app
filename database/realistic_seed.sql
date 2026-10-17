@@ -30,13 +30,13 @@ INSERT INTO tables_ (table_number) VALUES
 ('Outdoor 1'), ('Outdoor 2'), ('Outdoor 3');
 
 -- 3. MENU CATEGORIES
-INSERT INTO menu_categories (name, description, item_type, sort_order) VALUES
-('Coffee (Espresso Based)', 'Olahan kopi berbasis espresso', 'minuman', 1),
-('Manual Brew', 'Kopi seduh manual V60, Japanese, dll', 'minuman', 2),
-('Non-Coffee', 'Minuman tanpa kopi', 'minuman', 3),
-('Pastry & Bakery', 'Roti, croissant, dan kue', 'makanan', 4),
-('Main Course', 'Makanan berat', 'makanan', 5),
-('Snack', 'Camilan pendamping kopi', 'snack', 6);
+INSERT INTO menu_categories (name, description, sort_order) VALUES
+('Coffee (Espresso Based)', 'Olahan kopi berbasis espresso', 1),
+('Manual Brew', 'Kopi seduh manual V60, Japanese, dll', 2),
+('Non-Coffee', 'Minuman tanpa kopi', 3),
+('Pastry & Bakery', 'Roti, croissant, dan kue', 4),
+('Main Course', 'Makanan berat', 5),
+('Snack', 'Camilan pendamping kopi', 6);
 
 -- 4. RAW MATERIALS (Bahan Baku Coffeeshop)
 INSERT INTO raw_materials (name, category, stock, unit, min_stock, status) VALUES

@@ -18,7 +18,7 @@ test('manual stock changes serialize with payments and refunds and commit togeth
     const user = await User.create({ name: 'Owner test', username: 'owner', email: 'owner@example.test', role: 'owner', password_hash: 'test' });
     const jwt = require('jsonwebtoken');
     const token = jwt.sign({ id: user.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
+    const category = await MenuCategory.create({ name: 'Test' });
     const menu = await Menu.create({ category_id: category.id, name: 'Test menu', price: 10000 });
     const express = require('express');
     const app = express(); app.use(express.json());

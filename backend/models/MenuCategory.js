@@ -1,6 +1,5 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
-const { ITEM_TYPES } = require('../services/categoryTypes');
 
 const MenuCategory = sequelize.define('MenuCategory', {
   id: {
@@ -16,11 +15,6 @@ const MenuCategory = sequelize.define('MenuCategory', {
   description: {
     type: DataTypes.STRING(255),
     allowNull: true,
-  },
-  item_type: {
-    type: DataTypes.ENUM(...ITEM_TYPES),
-    allowNull: true, // Legacy categories may need an explicit choice by a manager.
-    validate: { isIn: [ITEM_TYPES] },
   },
   sort_order: {
     type: DataTypes.INTEGER,

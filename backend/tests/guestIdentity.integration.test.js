@@ -18,7 +18,7 @@ test('guest orders isolate unverified contact details without requiring phone, e
     await sequelize.sync();
     const owner = await User.create({ name: 'Owner', username: 'owner', email: 'owner@example.test', role: 'owner', password_hash: 'test' });
     const staffHeaders = { Authorization: `Bearer ${jwt.sign({ id: owner.id }, process.env.JWT_SECRET, { expiresIn: '1h' })}` };
-    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
+    const category = await MenuCategory.create({ name: 'Test' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi', price: 10000 });
     const express = require('express');
     const app = express(); app.use(express.json());

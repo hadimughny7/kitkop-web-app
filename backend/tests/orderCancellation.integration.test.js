@@ -17,7 +17,7 @@ test('cancellation restores only unprocessed stock exactly once', { skip: proces
   try {
     await sequelize.sync();
     const owner = await User.create({ name: 'Owner test', email: 'owner@example.test', username: 'owner', password_hash: 'test', role: 'owner' });
-    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
+    const category = await MenuCategory.create({ name: 'Test' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi', price: 10000 });
     const base = await RawMaterial.create({ name: 'Base material', stock: 1000, unit: 'gram' });
     const extra = await RawMaterial.create({ name: 'Extra material', stock: 1000, unit: 'gram' });

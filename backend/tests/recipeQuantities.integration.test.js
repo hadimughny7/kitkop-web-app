@@ -16,7 +16,7 @@ test('recipe API, database constraint and payment stock guard reject invalid qua
   try {
     await sequelize.sync();
     const owner = await User.create({ name: 'Owner test', email: 'owner@example.test', username: 'owner', password_hash: 'test', role: 'owner' });
-    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
+    const category = await MenuCategory.create({ name: 'Test' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi test', price: 10000 });
     const plain = await Menu.create({ category_id: category.id, name: 'Plain menu', price: 5000 });
     const material = await RawMaterial.create({ name: 'Test material', stock: 100, unit: 'gram' });

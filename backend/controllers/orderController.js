@@ -82,8 +82,8 @@ const createOrder = async (req, res, next, attempt = 0) => {
       subtotalCents += Math.round(unitPrice * 100) * item.qty;
       priceAmount(subtotalCents / 100, 409, 'Subtotal pesanan');
 
-      // Snapshot the configured type; category IDs/names carry no production meaning.
-      const item_type = categoryItemType(menu.category?.item_type, 409);
+      // Snapshot classification from the category name, never its database ID.
+      const item_type = categoryItemType(menu.category?.name);
 
       orderItems.push({
         menu_id: item.menu_id,

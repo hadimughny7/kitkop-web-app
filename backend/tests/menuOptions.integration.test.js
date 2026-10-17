@@ -25,7 +25,7 @@ test('options APIs, immutable order snapshots, payments and stock refunds', { sk
     const kitchen = await User.create({ name: 'Kitchen test', email: 'kitchen@example.test', username: 'kitchen', password_hash: 'test', role: 'kitchen' });
     const manager = await User.create({ name: 'Manager test', email: 'manager@example.test', username: 'manager', password_hash: 'test', role: 'manajer' });
     const inactiveCashier = await User.create({ name: 'Inactive test', email: 'inactive@example.test', username: 'inactive', password_hash: 'test', role: 'kasir', is_active: 0 });
-    const category = await MenuCategory.create({ name: 'Kopi', item_type: 'minuman' });
+    const category = await MenuCategory.create({ name: 'Kopi' });
     const material = await RawMaterial.create({ name: 'Biji kopi', stock: 1000, unit: 'gram' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi susu', price: 20000 });
     await MenuRecipe.create({ menu_id: menu.id, raw_material_id: material.id, quantity_used: 18 });

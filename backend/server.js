@@ -90,7 +90,6 @@ const startServer = async () => {
   await require('./migrations/add-qris-attempts')();
   await require('./migrations/validate-recipe-quantities')();
   await require('./migrations/validate-menu-prices')();
-  await require('./migrations/add-category-item-types')();
 
   // Auto-migrate: create settings table & add service_charge column
   try {

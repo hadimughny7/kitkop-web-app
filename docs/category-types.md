@@ -1,35 +1,26 @@
-# Jenis kategori menu (A07)
+# Klasifikasi item dari nama kategori (A07)
 
-Setiap kategori menyimpan `item_type`: `makanan`, `minuman`, atau `snack`. Pengelola memilih jenis pada **Manajemen Menu & Kategori → Kelola Kategori** saat menambah atau mengedit kategori. API kategori mewajibkan jenis valid saat create; update tanpa field tersebut mempertahankan nilai lama. Perubahan nama tidak mengubah jenis secara otomatis.
+Pengelola cukup mengisi nama kategori seperti biasa. Tidak ada pilihan jenis tambahan pada form atau kolom jenis pada daftar kategori. API create/update kategori juga tidak memerlukan `item_type`.
 
-Saat pesanan QR/POS dibuat, server menyalin jenis kategori ke `OrderItem.item_type`. ID kategori, nama kategori dan jenis yang dikirim klien tidak menentukan jenis item. Perubahan jenis kategori hanya berlaku bagi order baru; seluruh snapshot item pesanan lama tetap sama, termasuk yang mungkin salah sebelum perbaikan.
+Saat pesanan QR/POS dibuat, server menentukan `OrderItem.item_type` dari nama kategori, bukan ID atau field yang dikirim klien. Nama dinormalisasi untuk kapitalisasi, spasi, dan tanda baca.
 
-## Migrasi
-
-Startup backend menjalankan `add-category-item-types.js` sebelum menerima request. Skrip menambah kolom nullable pada database lama dan memetakan nama bawaan yang dikenal secara persis (abaikan kapitalisasi/spasi luar):
-
-| Nama kategori lama | Jenis |
+| Nama kategori | Klasifikasi internal |
 | --- | --- |
-| Coffee (Espresso Based), Manual Brew, Non-Coffee, Minuman | minuman |
-| Pastry & Bakery, Main Course, Makanan | makanan |
-| Snack | snack |
+| Coffee (Espresso Based), Manual Brew, Non-Coffee, Kopi | minuman |
+| Nama berawalan Minuman, Drink, Beverage, Coffee, Non Coffee, Kopi, Non Kopi, Tea, Teh, Jus, Juice, Matcha | minuman |
+| Nama berawalan Snack, Snacks, Camilan, Cemilan | snack |
+| Makanan, Pastry & Bakery, Main Course, nama lainnya | makanan |
 
-Tidak ada pemetaan berdasarkan ID. Nilai yang sudah ditentukan pengelola tidak ditimpa ketika migrasi diulang. Nama lama yang belum dikenal dibiarkan `NULL` dan ID-nya dilaporkan agar pengelola memilih jenis melalui UI. Daftar kategori menampilkan **Belum ditentukan**; order yang memakai kategori tersebut ditolak HTTP 409 tanpa meninggalkan data sebagian. Kolom nullable sengaja dipakai agar migrasi tidak mengarang klasifikasi kategori yang ambigu.
+Awalan dikenali sebagai kata utuh, sehingga `Coffeehouse` tidak dianggap `Coffee`. Nama baru yang belum dikenali tetap bisa dipakai memesan dan masuk Makanan sesuai fallback lama. Ini aturan berbasis nama, bukan pemahaman semua nama menu: gunakan nama kategori yang jelas seperti `Minuman Dingin` atau `Snack` jika membutuhkan pengelompokan tersebut. Kategori campuran mengikuti aturan pada tabel.
 
-Pemeriksaan baca-saja sebelum deploy, dari folder `backend`:
+Perubahan nama memengaruhi klasifikasi pesanan baru. Snapshot item pada pesanan lama tetap dipertahankan dan tidak dihitung ulang ketika kategori berubah.
 
-```powershell
-node migrations/add-category-item-types.js --audit
-```
+## Kompatibilitas
 
-Audit mengembalikan `item_type` saat ini dan `proposed_type`, bahkan sebelum kolom baru dibuat. Untuk migrasi manual:
+Tidak diperlukan migrasi kategori baru. Migrasi penambahan `menu_categories.item_type` dari versi sebelumnya tidak lagi dijalankan. Jika kolom tersebut sudah dibuat pada suatu instalasi, kolom dibiarkan utuh dan tidak dipakai aplikasi; tidak ada penghapusan data database otomatis. Kedua bentuk database sudah diuji.
 
-```powershell
-npm.cmd run migrate:category-types
-```
+Deploy backend dan frontend bersama lalu restart backend untuk memakai aturan baru. Tidak ada kategori yang perlu dikonfigurasi atau diblokir karena field jenis kosong.
 
-Deploy backend dan frontend bersama lalu restart backend agar migrasi berjalan. Periksa kategori yang belum diatur sebelum menggunakannya untuk pemesanan. Schema dan seed SQL baru sudah mencantumkan jenis eksplisit; pada database lama, jalankan migrasi sebelum memakai seed baru. Jangan menjalankan ulang seed pada database operasional untuk melakukan migrasi.
+## Pengujian
 
-## Validasi
-
-Tes integrasi mencakup Makanan dengan ID 1, Snack dengan ID 73, kategori baru dari Owner/Manajer, role tanpa izin, API dengan jenis tidak valid, skema lama, migrasi berulang, perubahan nama/jenis, order QR/POS, alur pembayaran/produksi, rollback kategori belum diatur, serta snapshot pesanan lama yang tidak berubah. Mutasi memakai schema MySQL lokal sementara yang dihapus setelah tes.
+Tes mencakup variasi nama dan ID, pembuatan kategori hanya dengan nama, QR/POS, pengubahan nama, snapshot lama, pembayaran/produksi, spoofing jenis dari klien, serta kompatibilitas dengan/tanpa kolom jenis kategori lama. Mutasi memakai schema MySQL lokal sementara yang dihapus setelah pengujian.

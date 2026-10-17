@@ -1,18 +1,14 @@
-const ITEM_TYPES = ['makanan', 'minuman', 'snack'];
-const categoryItemType = (value, statusCode = 400) => {
-  if (!ITEM_TYPES.includes(value)) {
-    throw Object.assign(new Error('Jenis kategori harus Makanan, Minuman, atau Snack. Tentukan jenis kategori sebelum memesan.'), { statusCode });
-  }
-  return value;
+// Category names are the only manager-facing classification. IDs and client
+// item_type fields carry no meaning; each order keeps its own type snapshot.
+const categoryItemType = name => {
+  const normalized = typeof name === 'string'
+    ? name.normalize('NFKC').toLowerCase().replace(/[-_&()/]+/g, ' ').replace(/\s+/g, ' ').trim()
+    : '';
+  if (/^(snacks?|camilan|cemilan)(\s|$)/.test(normalized)) return 'snack';
+  if (/^(minuman|drinks?|beverages?|coffee|non coffee|kopi|non kopi|tea|teh|jus|juice|matcha)(\s|$)/.test(normalized)
+    || normalized === 'manual brew') return 'minuman';
+  // Preserve the previous food fallback for custom or mixed category names.
+  return 'makanan';
 };
 
-// Exact known names only, for the one-time migration of old categories.
-// Unknown names remain unconfigured for the manager to classify explicitly.
-const legacyTypes = new Map([
-  ['coffee (espresso based)', 'minuman'], ['manual brew', 'minuman'], ['non-coffee', 'minuman'],
-  ['pastry & bakery', 'makanan'], ['main course', 'makanan'], ['snack', 'snack'],
-  ['makanan', 'makanan'], ['minuman', 'minuman'],
-]);
-const legacyCategoryType = name => legacyTypes.get(String(name).trim().toLowerCase()) || null;
-
-module.exports = { ITEM_TYPES, categoryItemType, legacyCategoryType };
+module.exports = { categoryItemType };
