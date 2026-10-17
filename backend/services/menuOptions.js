@@ -1,4 +1,5 @@
 const { recipeQuantity } = require('./recipeQuantities');
+const { priceAmount } = require('./menuPrices');
 const fail = (message, statusCode = 400) => { throw Object.assign(new Error(message), { statusCode }); };
 const money = (value) => Math.round(Number(value) * 100);
 
@@ -45,8 +46,9 @@ function resolveOptions(groups, choiceIds = []) {
     for (const choice of picked) {
       if (!choice.is_available) fail(`${choice.name} sedang tidak tersedia.`);
       remaining.delete(choice.id);
-      extra += money(choice.price);
-      selections.push({ group_id: group.id, group_name: group.name, choice_id: choice.id, name: choice.name, price: Number(choice.price), ingredients: choice.ingredients || [] });
+      const choicePrice = priceAmount(choice.price, 409, 'Harga tambahan');
+      extra += money(choicePrice);
+      selections.push({ group_id: group.id, group_name: group.name, choice_id: choice.id, name: choice.name, price: choicePrice, ingredients: choice.ingredients || [] });
     }
   }
   if (remaining.size) fail('Pilihan tidak tersedia atau bukan milik menu ini. Silakan pilih ulang.');

@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { fail } = require('../services/menuOptions');
 const { parseMenuOptions, saveMenuOptions } = require('../services/saveMenuOptions');
+const { priceAmount } = require('../services/menuPrices');
 const optionInclude = { model: OptionGroup, as: 'optionGroups', attributes: ['id', 'name', 'min_choices', 'max_choices', 'is_active', 'choices'], through: { attributes: ['sort_order'] } };
 // Public menu responses omit internal ingredient recipes.
 const publicMenu = (menu) => {
@@ -98,13 +99,14 @@ const createMenu = async (req, res, next) => {
   try {
     const { category_id, name, description, price } = req.body;
 
-    if (!category_id || !name || !price) {
+    if (!category_id || !name || price === undefined) {
       return res.status(400).json({
         success: false,
         message: 'category_id, name, dan price wajib diisi.',
       });
     }
 
+    const validPrice = priceAmount(price);
     const options = parseMenuOptions(req.body.option_groups);
     if (options !== undefined && req.body.option_group_ids !== undefined) fail('Gunakan satu format pilihan menu.');
     const groupIds = await parseGroups(req.body.option_group_ids);
@@ -115,7 +117,7 @@ const createMenu = async (req, res, next) => {
       category_id,
       name,
       description,
-      price,
+      price: validPrice,
       image,
       }, { transaction });
       await attachGroups(created, groupIds, transaction);
@@ -149,6 +151,7 @@ const updateMenu = async (req, res, next) => {
     }
 
     const { category_id, name, description, price } = req.body;
+    const validPrice = price !== undefined ? priceAmount(price) : undefined;
     const options = parseMenuOptions(req.body.option_groups);
     if (options !== undefined && req.body.option_group_ids !== undefined) fail('Gunakan satu format pilihan menu.');
     const groupIds = await parseGroups(req.body.option_group_ids);
@@ -156,7 +159,7 @@ const updateMenu = async (req, res, next) => {
     if (category_id) menu.category_id = category_id;
     if (name) menu.name = name;
     if (description !== undefined) menu.description = description;
-    if (price) menu.price = price;
+    if (validPrice !== undefined) menu.price = validPrice;
 
     // Handle image update
     if (req.file) {

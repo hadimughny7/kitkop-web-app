@@ -7,6 +7,7 @@ const { assertOrderPaid, getProductionOrder } = require('../services/orderProduc
 const { refundUnprocessedStock } = require('../services/orderCancellation');
 const { issueTrackingToken } = require('../services/orderTracking');
 const { emitRealtime } = require('../socket/realtimeEvents');
+const { priceAmount } = require('../services/menuPrices');
 
 const { allocateOrderNumber, isRetryableOrderError } = require('../services/orderNumbers');
 
@@ -53,7 +54,7 @@ const createOrder = async (req, res, next, attempt = 0) => {
     }, { transaction: t });
 
     // Calculate totals
-    let subtotal = 0;
+    let subtotalCents = 0;
     const orderItems = [];
 
     for (const item of items) {
@@ -73,11 +74,12 @@ const createOrder = async (req, res, next, attempt = 0) => {
       }
 
       if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 999) fail('Jumlah item harus bilangan bulat 1-999.');
+      const basePrice = priceAmount(menu.price, 409);
       const { selections, extra } = resolveOptions(menu.optionGroups, item.option_ids);
-      const unitPrice = Math.round((Number(menu.price) + extra) * 100) / 100;
-      if (item.expected_price !== undefined && Math.round(Number(item.expected_price) * 100) !== Math.round(unitPrice * 100)) fail(`Harga ${menu.name} berubah. Silakan perbarui pilihan sebelum memesan.`, 409);
-      const itemTotal = unitPrice * item.qty;
-      subtotal += itemTotal;
+      const unitPrice = priceAmount(basePrice + extra, 409, 'Harga item');
+      if (item.expected_price !== undefined && priceAmount(item.expected_price) !== unitPrice) fail(`Harga ${menu.name} berubah. Silakan perbarui pilihan sebelum memesan.`, 409);
+      subtotalCents += Math.round(unitPrice * 100) * item.qty;
+      priceAmount(subtotalCents / 100, 409, 'Subtotal pesanan');
 
       // Determine item_type from category
       let item_type = 'makanan';
@@ -96,7 +98,7 @@ const createOrder = async (req, res, next, attempt = 0) => {
         menu_id: item.menu_id,
         qty: item.qty,
         price: unitPrice,
-        base_price: Number(menu.price),
+        base_price: basePrice,
         selected_options: selections.map(({ ingredients, ...selection }) => selection),
         stock_usage: buildStockUsage(menu.recipes, selections),
         notes: item.notes || null,
@@ -110,9 +112,10 @@ const createOrder = async (req, res, next, attempt = 0) => {
     const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
     const serviceRate = serviceSetting ? parseFloat(serviceSetting.value) / 100 : 0;
 
-    const tax = Math.round(subtotal * taxRate);
-    const service_charge = Math.round(subtotal * serviceRate);
-    const total = subtotal + tax + service_charge;
+    const subtotal = subtotalCents / 100;
+    const tax = priceAmount(Math.round(subtotal * taxRate), 409, 'Pajak pesanan');
+    const service_charge = priceAmount(Math.round(subtotal * serviceRate), 409, 'Biaya layanan pesanan');
+    const total = priceAmount(subtotal + tax + service_charge, 409, 'Total pesanan');
 
     const hasFood = orderItems.some(i => i.item_type === 'makanan' || i.item_type === 'snack');
     const hasDrink = orderItems.some(i => i.item_type === 'minuman');

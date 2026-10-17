@@ -1,5 +1,6 @@
 const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const { priceAmount } = require('../services/menuPrices');
 
 const Menu = sequelize.define('Menu', {
   id: {
@@ -23,6 +24,9 @@ const Menu = sequelize.define('Menu', {
   price: {
     type: DataTypes.DECIMAL(12, 2),
     allowNull: false,
+    validate: {
+      validPrice(value) { priceAmount(value); },
+    },
   },
   image: {
     type: DataTypes.STRING(255),
