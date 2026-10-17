@@ -29,6 +29,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const settingRoutes = require('./routes/settingRoutes');
 
 const app = express();
+app.set('trust proxy', require('./config/trustedProxies')());
 const server = http.createServer(app);
 
 // Socket.io setup

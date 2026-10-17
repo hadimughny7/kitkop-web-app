@@ -8,9 +8,10 @@ const { User } = require('../models');
  */
 const login = async (req, res, next) => {
   try {
-    const { login, password } = req.body;
+    const { login, password } = req.body || {};
 
-    if (!login || !password) {
+    if (typeof login !== 'string' || !login.trim() || login.length > 100 ||
+        typeof password !== 'string' || !password || password.length > 1024) {
       return res.status(400).json({
         success: false,
         message: 'Email/username dan password wajib diisi.',
@@ -18,7 +19,7 @@ const login = async (req, res, next) => {
     }
 
     // Find user by email or username
-    const user = await User.findOne({
+    const user = req.loginUser !== undefined ? req.loginUser : await User.findOne({
       where: {
         [require('sequelize').Op.or]: [
           { email: login },
