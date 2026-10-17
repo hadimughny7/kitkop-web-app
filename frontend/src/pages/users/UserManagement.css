@@ -1,0 +1,10 @@
+.user-management .account-access-note {
+  color: var(--neutral-600);
+  font-size: var(--text-sm);
+}
+
+.user-management .form-select:disabled {
+  background-color: var(--neutral-100);
+  color: var(--neutral-600);
+  cursor: not-allowed;
+}

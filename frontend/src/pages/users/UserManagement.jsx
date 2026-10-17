@@ -3,6 +3,7 @@ import { userAPI } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch } from 'react-icons/hi';
+import './UserManagement.css';
 
 const UserManagement = () => {
   const { user, logout } = useAuth();
@@ -12,6 +13,11 @@ const UserManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', username: '', password: '', role: 'kasir' });
+  const isOwner = user?.role === 'owner';
+  const managedRoles = ['kasir', 'kitchen', 'barista'];
+  const canEdit = (target) => isOwner || target.id === user?.id || managedRoles.includes(target.role);
+  const canDelete = (target) => target.id !== user?.id && (isOwner || managedRoles.includes(target.role));
+  const editingOwnManagerProfile = !isOwner && editUser?.id === user?.id;
 
   useEffect(() => { loadUsers(); }, []);
 
@@ -61,7 +67,7 @@ const UserManagement = () => {
   if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
 
   return (
-    <div>
+    <div className="user-management">
       <div className="page-header">
         <div><h1 className="page-title">Manajemen Pengguna</h1><p className="page-subtitle">Kelola akun staff Kitkop.id</p></div>
         <button className="btn btn-primary" onClick={openCreate}><HiOutlinePlus /> Tambah Staff</button>
@@ -87,8 +93,9 @@ const UserManagement = () => {
                   <td><span className={`badge ${u.is_active ? 'badge-success' : 'badge-neutral'}`}>{u.is_active ? 'Aktif' : 'Nonaktif'}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                      <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}><HiOutlinePencil /></button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(u.id)} style={{ color: 'var(--danger-500)' }}><HiOutlineTrash /></button>
+                      {canEdit(u) && <button className="btn btn-ghost btn-sm" aria-label={`Edit akun ${u.name}`} onClick={() => openEdit(u)}><HiOutlinePencil /></button>}
+                      {canDelete(u) && <button className="btn btn-ghost btn-sm" aria-label={`Hapus akun ${u.name}`} onClick={() => handleDelete(u.id)} style={{ color: 'var(--danger-500)' }}><HiOutlineTrash /></button>}
+                      {!canEdit(u) && <span className="account-access-note">Dikelola Owner</span>}
                     </div>
                   </td>
                 </tr>
@@ -124,14 +131,15 @@ const UserManagement = () => {
                   <input className="form-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} {...(!editUser && { required: true })} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Role</label>
-                  <select className="form-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                  <label className="form-label" htmlFor="staff-role">Role</label>
+                  <select id="staff-role" className="form-select" value={form.role} disabled={editingOwnManagerProfile} aria-describedby={editingOwnManagerProfile ? 'staff-role-help' : undefined} onChange={(e) => setForm({ ...form, role: e.target.value })}>
                     <option value="kasir">Kasir</option>
                     <option value="barista">Barista</option>
                     <option value="kitchen">Dapur</option>
-                    <option value="manajer">Manajer</option>
-                    <option value="owner">Owner</option>
+                    {(isOwner || editingOwnManagerProfile) && <option value="manajer">Manajer</option>}
+                    {isOwner && <option value="owner">Owner</option>}
                   </select>
+                  {editingOwnManagerProfile && <p id="staff-role-help" className="account-access-note">Hanya Owner yang dapat mengubah role akun Manajer.</p>}
                 </div>
               </div>
               <div className="modal-footer">

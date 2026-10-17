@@ -5,6 +5,7 @@ const { userRoom } = require('../socket/realtimeEvents');
 const { STAFF_ROLES } = require('../constants/roles');
 const { sequelize } = require('../config/database');
 const { revokeStaffSockets } = require('../services/staffSessions');
+const { assertCanCreate, assertCanUpdate, assertCanDelete, withManagedUsers } = require('../services/userManagementPolicy');
 
 /**
  * GET /api/users
@@ -91,29 +92,14 @@ const createUser = async (req, res, next) => {
       });
     }
 
-    // Check duplicates
-    const existing = await User.findOne({
-      where: {
-        [Op.or]: [{ email }, { username }],
-      },
-    });
-
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        message: 'Email atau username sudah digunakan.',
+    const user = await withManagedUsers(req, undefined, async ({ actor, transaction }) => {
+      assertCanCreate(actor, role);
+      const existing = await User.findOne({
+        where: { [Op.or]: [{ email }, { username }] }, transaction,
       });
-    }
-
-    const password_hash = await bcrypt.hash(password, 10);
-
-    const user = await User.create({
-      name,
-      email,
-      username,
-      password_hash,
-      role,
-      created_by: req.user.id,
+      if (existing) throw Object.assign(new Error('Email atau username sudah digunakan.'), { statusCode: 409 });
+      const password_hash = await bcrypt.hash(password, 10);
+      return User.create({ name, email, username, password_hash, role, created_by: actor.id }, { transaction });
     });
 
     res.status(201).json({
@@ -138,15 +124,6 @@ const createUser = async (req, res, next) => {
  */
 const updateUser = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User tidak ditemukan.',
-      });
-    }
-
     const { name, email, username, password, role, is_active } = req.body;
 
     if (role !== undefined && !STAFF_ROLES.includes(role)) {
@@ -156,42 +133,29 @@ const updateUser = async (req, res, next) => {
       });
     }
 
-    // Check email/username uniqueness if changed
-    if (email && email !== user.email) {
-      const existing = await User.findOne({ where: { email } });
-      if (existing) {
-        return res.status(409).json({
-          success: false,
-          message: 'Email sudah digunakan.',
-        });
+    const { user, accessChanged } = await withManagedUsers(req, Number(req.params.id), async ({ actor, target: user, transaction }) => {
+      assertCanUpdate(actor, user, { role, is_active });
+      if (email && email !== user.email) {
+        const existing = await User.findOne({ where: { email }, transaction });
+        if (existing) throw Object.assign(new Error('Email sudah digunakan.'), { statusCode: 409 });
       }
-    }
-
-    if (username && username !== user.username) {
-      const existing = await User.findOne({ where: { username } });
-      if (existing) {
-        return res.status(409).json({
-          success: false,
-          message: 'Username sudah digunakan.',
-        });
+      if (username && username !== user.username) {
+        const existing = await User.findOne({ where: { username }, transaction });
+        if (existing) throw Object.assign(new Error('Username sudah digunakan.'), { statusCode: 409 });
       }
-    }
-
-    // Update fields
-    if (name) user.name = name;
-    if (email) user.email = email;
-    if (username) user.username = username;
-    if (role) user.role = role;
-    if (is_active !== undefined) user.is_active = is_active;
-    if (password) {
-      user.password_hash = await bcrypt.hash(password, 10);
-      // Increment in the same UPDATE as the hash, using the current DB value.
-      // Concurrent password resets cannot lose an increment or revive a token.
-      user.session_version = sequelize.literal('session_version + 1');
-    }
-
-    const accessChanged = user.changed('role') || user.changed('is_active');
-    await user.save();
+      if (name) user.name = name;
+      if (email) user.email = email;
+      if (username) user.username = username;
+      if (role) user.role = role;
+      if (is_active !== undefined) user.is_active = is_active;
+      if (password) {
+        user.password_hash = await bcrypt.hash(password, 10);
+        user.session_version = sequelize.literal('session_version + 1');
+      }
+      const accessChanged = user.changed('role') || user.changed('is_active');
+      await user.save({ transaction });
+      return { user, accessChanged };
+    });
     if (password) {
       const current = await User.findByPk(user.id, { attributes: ['session_version'] });
       await revokeStaffSockets(req.app.get('io'), user.id, current.session_version);
@@ -223,24 +187,14 @@ const updateUser = async (req, res, next) => {
  */
 const deleteUser = async (req, res, next) => {
   try {
-    const user = await User.findByPk(req.params.id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User tidak ditemukan.',
-      });
-    }
-
-    // Prevent deleting own account
-    if (user.id === req.user.id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Tidak dapat menghapus akun sendiri.',
-      });
-    }
-
-    await user.destroy();
+    const user = await withManagedUsers(req, Number(req.params.id), async ({ actor, target, transaction }) => {
+      if (target.id === actor.id) {
+        throw Object.assign(new Error('Tidak dapat menghapus akun sendiri.'), { statusCode: 400 });
+      }
+      assertCanDelete(actor, target);
+      await target.destroy({ transaction });
+      return target;
+    });
     req.app.get('io')?.in(userRoom(user.id)).disconnectSockets(true);
 
     res.json({
