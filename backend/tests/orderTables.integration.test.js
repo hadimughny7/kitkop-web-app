@@ -17,7 +17,7 @@ test('new orders require an existing active table when a table is supplied', { s
     const owner = await User.create({ name: 'Owner', username: 'owner', email: 'owner@example.test', password_hash: 'test', role: 'owner' });
     const active = await Table.create({ table_number: 'A1', is_active: 1 });
     const inactive = await Table.create({ table_number: 'B1', is_active: 0 });
-    const category = await MenuCategory.create({ name: 'Test' });
+    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi test', price: 10000 });
     const material = await RawMaterial.create({ name: 'Test material', stock: 1000, unit: 'gram' });
     await MenuRecipe.create({ menu_id: menu.id, raw_material_id: material.id, quantity_used: 0.5 });

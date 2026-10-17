@@ -1,4 +1,5 @@
 const { MenuCategory } = require('../models');
+const { categoryItemType } = require('../services/categoryTypes');
 
 /**
  * GET /api/categories
@@ -19,11 +20,12 @@ const getCategories = async (req, res, next) => {
  */
 const createCategory = async (req, res, next) => {
   try {
-    const { name, description, sort_order } = req.body;
+    const { name, description, sort_order, item_type } = req.body;
     if (!name) {
       return res.status(400).json({ success: false, message: 'Nama kategori wajib diisi.' });
     }
-    const category = await MenuCategory.create({ name, description, sort_order: sort_order || 0 });
+    const type = categoryItemType(item_type);
+    const category = await MenuCategory.create({ name, description, item_type: type, sort_order: sort_order || 0 });
     res.status(201).json({ success: true, message: 'Kategori berhasil ditambahkan.', data: category });
   } catch (error) {
     next(error);
@@ -39,7 +41,8 @@ const updateCategory = async (req, res, next) => {
     if (!category) {
       return res.status(404).json({ success: false, message: 'Kategori tidak ditemukan.' });
     }
-    const { name, description, sort_order } = req.body;
+    const { name, description, sort_order, item_type } = req.body;
+    if (item_type !== undefined) category.item_type = categoryItemType(item_type);
     if (name) category.name = name;
     if (description !== undefined) category.description = description;
     if (sort_order !== undefined) category.sort_order = sort_order;

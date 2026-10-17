@@ -22,7 +22,7 @@ test('QRIS retries replace mock/invalid invoices and preserve real gateway refer
     const success = (req, res) => res.json(invoice(req)); responder = success;
     await sequelize.sync(); const migrate = require('../migrations/add-qris-attempts'); await migrate(); await migrate();
     const user = await User.create({ name: 'Owner', username: 'owner', email: 'owner@example.test', role: 'owner', password_hash: 'test' });
-    const cat = await MenuCategory.create({ name: 'Test' }); const menu = await Menu.create({ name: 'Kopi', price: 10000, category_id: cat.id });
+    const cat = await MenuCategory.create({ name: 'Test', item_type: 'makanan' }); const menu = await Menu.create({ name: 'Kopi', price: 10000, category_id: cat.id });
     const material = await RawMaterial.create({ name: 'Bahan', stock: 1000, unit: 'gram' });
     const app = express(); const { capturePaymentWebhookBody } = require('../services/paymentWebhookSignature'); app.use(express.json({ verify: capturePaymentWebhookBody }));
     const events = []; app.set('io', { to: () => ({ emit: (...args) => events.push(args) }) });

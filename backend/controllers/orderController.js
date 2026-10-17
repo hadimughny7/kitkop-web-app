@@ -8,6 +8,7 @@ const { refundUnprocessedStock } = require('../services/orderCancellation');
 const { issueTrackingToken } = require('../services/orderTracking');
 const { emitRealtime } = require('../socket/realtimeEvents');
 const { priceAmount } = require('../services/menuPrices');
+const { categoryItemType } = require('../services/categoryTypes');
 
 const { allocateOrderNumber, isRetryableOrderError } = require('../services/orderNumbers');
 
@@ -81,18 +82,8 @@ const createOrder = async (req, res, next, attempt = 0) => {
       subtotalCents += Math.round(unitPrice * 100) * item.qty;
       priceAmount(subtotalCents / 100, 409, 'Subtotal pesanan');
 
-      // Determine item_type from category
-      let item_type = 'makanan';
-      if (menu.category) {
-        const catId = menu.category.id;
-        if ([1, 2, 3].includes(catId)) {
-          item_type = 'minuman';
-        } else if (catId === 6) {
-          item_type = 'snack';
-        } else {
-          item_type = 'makanan';
-        }
-      }
+      // Snapshot the configured type; category IDs/names carry no production meaning.
+      const item_type = categoryItemType(menu.category?.item_type, 409);
 
       orderItems.push({
         menu_id: item.menu_id,

@@ -20,7 +20,7 @@ test('concurrent orders have unique numbers, correct contents and atomic retry/r
     await Order.create({ order_number: `${prefix}0042` });
     const migrate = require('../migrations/add-order-counters');
     await migrate(); await migrate();
-    const category = await MenuCategory.create({ name: 'Test' });
+    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
     const menu = await Menu.create({ category_id: category.id, name: 'Menu A', price: 10000 });
     const second = await Menu.create({ category_id: category.id, name: 'Menu B', price: 7000 });
     const express = require('express');

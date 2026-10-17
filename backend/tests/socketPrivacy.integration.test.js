@@ -18,7 +18,7 @@ test('real sockets authenticate staff, isolate customer orders and minimize payl
     const users = {};
     for (const role of STAFF_ROLES) users[role] = await User.create({ name: role, username: role, email: `${role}@example.test`, role, password_hash: 'test' });
     const inactive = await User.create({ name: 'Inactive', username: 'inactive', email: 'inactive@example.test', role: 'kasir', password_hash: 'test', is_active: 0 });
-    const category = await MenuCategory.create({ name: 'Test' });
+    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi', price: 10000 });
     const express = require('express'); const app = express(); app.use(express.json());
     server = require('node:http').createServer(app); io = new (require('socket.io').Server)(server);

@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineTag } from 'react-icons/hi';
 import './MenuManagement.css';
 
+const categoryTypeLabels = { makanan: 'Makanan', minuman: 'Minuman', snack: 'Snack' };
+
 const MenuManagement = () => {
   const menuDialog = useRef(null);
   const [optionGroups, setOptionGroups] = useState([]);
@@ -34,7 +36,7 @@ const MenuManagement = () => {
   
   const [form, setForm] = useState({ name: '', description: '', price: '', category_id: '', is_available: true });
   const [imageFile, setImageFile] = useState(null);
-  const [catForm, setCatForm] = useState({ name: '', description: '' });
+  const [catForm, setCatForm] = useState({ name: '', description: '', item_type: '' });
 
   useEffect(() => {
     loadData();
@@ -199,7 +201,7 @@ const MenuManagement = () => {
         </div>
         {isManager && (
           <div className="menu-management-actions">
-            <button className="btn btn-secondary" onClick={() => { setEditCat(null); setCatForm({ name: '', description: '' }); setShowCatModal(true); }}>
+            <button className="btn btn-secondary" onClick={() => { setEditCat(null); setCatForm({ name: '', description: '', item_type: '' }); setShowCatModal(true); }}>
               <HiOutlineTag /> Kelola Kategori
             </button>
             <button className="btn btn-primary" onClick={openCreateMenu}>
@@ -329,26 +331,35 @@ const MenuManagement = () => {
               <button className="btn btn-ghost btn-sm" onClick={() => setShowCatModal(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ background: 'var(--neutral-50)' }}>
-              <form onSubmit={handleCatSubmit} style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'flex-end', marginBottom: 'var(--space-4)' }}>
-                <div className="form-group" style={{ flex: 1 }}>
-                  <label className="form-label">Nama Kategori</label>
-                  <input className="form-input" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} required placeholder="Misal: Minuman Dingin" />
+              <form onSubmit={handleCatSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'flex-end', marginBottom: 'var(--space-4)' }}>
+                <div className="form-group" style={{ flex: '1 1 180px', minWidth: 0 }}>
+                  <label className="form-label" htmlFor="category-name">Nama Kategori</label>
+                  <input id="category-name" className="form-input" value={catForm.name} onChange={(e) => setCatForm({ ...catForm, name: e.target.value })} required placeholder="Misal: Minuman Dingin" />
+                </div>
+                <div className="form-group" style={{ flex: '1 1 140px', minWidth: 0 }}>
+                  <label className="form-label" htmlFor="category-item-type">Jenis Kategori</label>
+                  <select id="category-item-type" className="form-select" value={catForm.item_type} onChange={(e) => setCatForm({ ...catForm, item_type: e.target.value })} required>
+                    <option value="" disabled>Pilih jenis</option>
+                    {Object.entries(categoryTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
                 </div>
                 <button type="submit" className="btn btn-primary">{editCat ? 'Update' : 'Tambah'}</button>
-                {editCat && <button type="button" className="btn btn-secondary" onClick={() => { setEditCat(null); setCatForm({ name: '', description: '' }); }}>Batal Edit</button>}
+                {editCat && <button type="button" className="btn btn-secondary" onClick={() => { setEditCat(null); setCatForm({ name: '', description: '', item_type: '' }); }}>Batal Edit</button>}
               </form>
 
-              <div className="card">
+              {categories.some(c => !c.item_type) && <p>Tentukan jenis kategori yang belum diatur agar menunya dapat dipesan.</p>}
+              <div className="card" style={{ overflowX: 'auto' }}>
                 <table className="data-table">
-                  <thead><tr><th>Nama Kategori</th><th style={{ width: 100 }}>Aksi</th></tr></thead>
+                  <thead><tr><th>Nama Kategori</th><th>Jenis</th><th style={{ width: 100 }}>Aksi</th></tr></thead>
                   <tbody>
                     {categories.map((c) => (
                       <tr key={c.id}>
                         <td style={{ fontWeight: 600 }}>{c.name}</td>
+                        <td>{categoryTypeLabels[c.item_type] || 'Belum ditentukan'}</td>
                         <td>
                           <div style={{ display: 'flex', gap: 'var(--space-1)' }}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditCat(c); setCatForm({ name: c.name, description: c.description || '' }); }}><HiOutlinePencil /></button>
-                            <button className="btn btn-ghost btn-sm" onClick={() => handleDeleteCat(c.id)} style={{ color: 'var(--danger-500)' }}><HiOutlineTrash /></button>
+                            <button className="btn btn-ghost btn-sm" aria-label={`Edit kategori ${c.name}`} onClick={() => { setEditCat(c); setCatForm({ name: c.name, description: c.description || '', item_type: c.item_type || '' }); }}><HiOutlinePencil /></button>
+                            <button className="btn btn-ghost btn-sm" aria-label={`Hapus kategori ${c.name}`} onClick={() => handleDeleteCat(c.id)} style={{ color: 'var(--danger-500)' }}><HiOutlineTrash /></button>
                           </div>
                         </td>
                       </tr>

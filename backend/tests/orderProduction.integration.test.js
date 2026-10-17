@@ -16,7 +16,7 @@ test('production requires paid orders and preserves normal kitchen workflows', {
     await sequelize.sync();
     const kitchen = await User.create({ name: 'Kitchen test', email: 'kitchen@example.test', username: 'kitchen', password_hash: 'test', role: 'kitchen' });
     const cashier = await User.create({ name: 'Cashier test', email: 'cashier@example.test', username: 'cashier', password_hash: 'test', role: 'kasir' });
-    const category = await MenuCategory.create({ name: 'Test' });
+    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
     const menu = await Menu.create({ category_id: category.id, name: 'Test menu', price: 5000 });
     const express = require('express');
     const app = express();

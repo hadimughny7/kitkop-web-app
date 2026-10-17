@@ -18,7 +18,7 @@ test('menu APIs, model, order calculation and database reject invalid prices whi
     await sequelize.sync();
     const owner = await User.create({ name: 'Owner', username: 'owner', email: 'owner@example.test', role: 'owner', password_hash: 'test' });
     const token = require('jsonwebtoken').sign({ id: owner.id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    const category = await MenuCategory.create({ name: 'Test' });
+    const category = await MenuCategory.create({ name: 'Test', item_type: 'makanan' });
     const express = require('express');
     const app = express(); app.use(express.json());
     const events = [];

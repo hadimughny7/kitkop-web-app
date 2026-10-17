@@ -14,7 +14,7 @@ test('HTTP tracking requires an expiring capability bound to both order ID and n
     await sequelize.sync();
     const owner = await User.create({ name: 'Staff private', username: 'owner', email: 'owner@example.test', role: 'owner', password_hash: 'test' });
     const table = await Table.create({ table_number: 'A1' });
-    const category = await MenuCategory.create({ name: 'Kopi' });
+    const category = await MenuCategory.create({ name: 'Kopi', item_type: 'minuman' });
     const menu = await Menu.create({ category_id: category.id, name: 'Kopi', price: 10000 });
     const express = require('express'); const app = express(); app.use(express.json());
     app.use('/api/orders', require('../routes/orderRoutes'));
