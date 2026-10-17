@@ -300,7 +300,7 @@ const payCash = async (req, res, next) => {
     } else {
       trx = await Transaction.create({
         order_id: order.id,
-        ref_id: `CASH-${Date.now()}`,
+        ref_id: `CASH-${order.id}-${Date.now()}`,
         amount: parseFloat(order.total),
         payment_method: 'CASH',
         status: 'paid',

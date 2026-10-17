@@ -66,9 +66,12 @@ const createStock = async (req, res, next) => {
  * PUT /api/stocks/:id
  */
 const updateStock = async (req, res, next) => {
+  let transaction;
   try {
-    const material = await RawMaterial.findByPk(req.params.id);
+    transaction = await sequelize.transaction();
+    const material = await RawMaterial.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!material) {
+      await transaction.rollback();
       return res.status(404).json({ success: false, message: 'Bahan baku tidak ditemukan.' });
     }
 
@@ -86,9 +89,11 @@ const updateStock = async (req, res, next) => {
     else if (stockVal <= minVal) material.status = 'menipis';
     else material.status = 'aman';
 
-    await material.save();
+    await material.save({ transaction });
+    await transaction.commit();
     res.json({ success: true, message: 'Bahan baku berhasil diperbarui.', data: material });
   } catch (error) {
+    if (transaction && !transaction.finished) await transaction.rollback();
     next(error);
   }
 };
@@ -120,14 +125,19 @@ const deleteStock = async (req, res, next) => {
  * Manual restock
  */
 const restockMaterial = async (req, res, next) => {
+  let transaction;
   try {
-    const material = await RawMaterial.findByPk(req.params.id);
+    transaction = await sequelize.transaction();
+    // Use the same row lock as payment deductions and refunds.
+    const material = await RawMaterial.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!material) {
+      await transaction.rollback();
       return res.status(404).json({ success: false, message: 'Bahan baku tidak ditemukan.' });
     }
 
     const { quantity, notes } = req.body;
     if (!quantity || parseFloat(quantity) <= 0) {
+      await transaction.rollback();
       return res.status(400).json({ success: false, message: 'Jumlah restock harus lebih dari 0.' });
     }
 
@@ -139,7 +149,7 @@ const restockMaterial = async (req, res, next) => {
     else if (material.stock <= parseFloat(material.min_stock)) material.status = 'menipis';
     else material.status = 'aman';
 
-    await material.save();
+    await material.save({ transaction });
 
     // Log
     await StockLog.create({
@@ -148,13 +158,15 @@ const restockMaterial = async (req, res, next) => {
       type: 'restock',
       notes: notes || `Restock ${addQty} ${material.unit}`,
       created_by: req.user ? req.user.id : null,
-    });
+    }, { transaction });
+    await transaction.commit();
 
     const io = req.app.get('io');
     if (io) emitRealtime(io, 'stock-updated');
 
     res.json({ success: true, message: 'Restock berhasil.', data: material });
   } catch (error) {
+    if (transaction && !transaction.finished) await transaction.rollback();
     next(error);
   }
 };
@@ -342,14 +354,18 @@ const refundStockForOrderItem = async (orderId, orderItem, transaction) => {
  * Manual stock reduction (expired, damaged, unusable)
  */
 const reduceMaterial = async (req, res, next) => {
+  let transaction;
   try {
-    const material = await RawMaterial.findByPk(req.params.id);
+    transaction = await sequelize.transaction();
+    const material = await RawMaterial.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
     if (!material) {
+      await transaction.rollback();
       return res.status(404).json({ success: false, message: 'Bahan baku tidak ditemukan.' });
     }
 
     const { quantity, notes } = req.body;
     if (!quantity || parseFloat(quantity) <= 0) {
+      await transaction.rollback();
       return res.status(400).json({ success: false, message: 'Jumlah pengurangan harus lebih dari 0.' });
     }
 
@@ -357,6 +373,7 @@ const reduceMaterial = async (req, res, next) => {
     const currentStock = parseFloat(material.stock);
 
     if (reduceQty > currentStock) {
+      await transaction.rollback();
       return res.status(400).json({ success: false, message: `Jumlah pengurangan (${reduceQty}) melebihi stok saat ini (${currentStock} ${material.unit}).` });
     }
 
@@ -367,7 +384,7 @@ const reduceMaterial = async (req, res, next) => {
     else if (material.stock <= parseFloat(material.min_stock)) material.status = 'menipis';
     else material.status = 'aman';
 
-    await material.save();
+    await material.save({ transaction });
 
     // Log
     await StockLog.create({
@@ -376,13 +393,15 @@ const reduceMaterial = async (req, res, next) => {
       type: 'manual_reduction',
       notes: notes || `Pengurangan manual ${reduceQty} ${material.unit}`,
       created_by: req.user ? req.user.id : null,
-    });
+    }, { transaction });
+    await transaction.commit();
 
     const io = req.app.get('io');
     if (io) emitRealtime(io, 'stock-updated');
 
     res.json({ success: true, message: 'Pengurangan stok berhasil.', data: material });
   } catch (error) {
+    if (transaction && !transaction.finished) await transaction.rollback();
     next(error);
   }
 };
