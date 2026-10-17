@@ -3,6 +3,7 @@ const { RawMaterial, MenuRecipe, StockLog, Menu, Order, Customer, Table, User, O
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { stockUsageQuantity } = require('../services/recipeQuantities');
+const { stockQuantity, changedStock } = require('../services/stockQuantities');
 
 /**
  * GET /api/stocks
@@ -46,8 +47,8 @@ const createStock = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'Nama dan satuan wajib diisi.' });
     }
 
-    const stockVal = parseFloat(stock) || 0;
-    const minVal = parseFloat(min_stock) || 0;
+    const stockVal = stock === undefined ? 0 : stockQuantity(stock);
+    const minVal = min_stock === undefined ? 0 : stockQuantity(min_stock, false, 'Stok minimum');
     let status = 'aman';
     if (stockVal <= 0) status = 'kritis';
     else if (stockVal <= minVal) status = 'menipis';
@@ -79,12 +80,12 @@ const updateStock = async (req, res, next) => {
     if (name) material.name = name;
     if (category !== undefined) material.category = category;
     if (unit) material.unit = unit;
-    if (min_stock !== undefined) material.min_stock = parseFloat(min_stock);
-    if (stock !== undefined) material.stock = parseFloat(stock);
+    if (min_stock !== undefined) material.min_stock = stockQuantity(min_stock, false, 'Stok minimum');
+    if (stock !== undefined) material.stock = stockQuantity(stock);
 
     // Recalculate status
-    const stockVal = parseFloat(material.stock);
-    const minVal = parseFloat(material.min_stock);
+    const stockVal = Number(material.stock);
+    const minVal = Number(material.min_stock);
     if (stockVal <= 0) material.status = 'kritis';
     else if (stockVal <= minVal) material.status = 'menipis';
     else material.status = 'aman';
@@ -136,17 +137,12 @@ const restockMaterial = async (req, res, next) => {
     }
 
     const { quantity, notes } = req.body;
-    if (!quantity || parseFloat(quantity) <= 0) {
-      await transaction.rollback();
-      return res.status(400).json({ success: false, message: 'Jumlah restock harus lebih dari 0.' });
-    }
-
-    const addQty = parseFloat(quantity);
-    material.stock = parseFloat(material.stock) + addQty;
+    const addQty = stockQuantity(quantity, true, 'Jumlah restock');
+    material.stock = changedStock(material.stock, addQty);
 
     // Update status
     if (material.stock <= 0) material.status = 'kritis';
-    else if (material.stock <= parseFloat(material.min_stock)) material.status = 'menipis';
+    else if (material.stock <= Number(material.min_stock)) material.status = 'menipis';
     else material.status = 'aman';
 
     await material.save({ transaction });
@@ -364,24 +360,19 @@ const reduceMaterial = async (req, res, next) => {
     }
 
     const { quantity, notes } = req.body;
-    if (!quantity || parseFloat(quantity) <= 0) {
-      await transaction.rollback();
-      return res.status(400).json({ success: false, message: 'Jumlah pengurangan harus lebih dari 0.' });
-    }
-
-    const reduceQty = parseFloat(quantity);
-    const currentStock = parseFloat(material.stock);
+    const reduceQty = stockQuantity(quantity, true, 'Jumlah pengurangan');
+    const currentStock = Number(material.stock);
 
     if (reduceQty > currentStock) {
       await transaction.rollback();
       return res.status(400).json({ success: false, message: `Jumlah pengurangan (${reduceQty}) melebihi stok saat ini (${currentStock} ${material.unit}).` });
     }
 
-    material.stock = currentStock - reduceQty;
+    material.stock = changedStock(currentStock, -reduceQty);
 
     // Update status
     if (material.stock <= 0) material.status = 'kritis';
-    else if (material.stock <= parseFloat(material.min_stock)) material.status = 'menipis';
+    else if (material.stock <= Number(material.min_stock)) material.status = 'menipis';
     else material.status = 'aman';
 
     await material.save({ transaction });
