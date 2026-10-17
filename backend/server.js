@@ -52,6 +52,7 @@ app.use(express.json({ verify: capturePaymentWebhookBody }));
 app.use(express.urlencoded({ extended: true }));
 
 // Serve uploaded files
+app.use('/uploads/menus', require('./middleware/menuImageStatic'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API Routes

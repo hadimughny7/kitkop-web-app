@@ -5,6 +5,7 @@ const { sequelize } = require('../config/database');
 const { fail } = require('../services/menuOptions');
 const { parseMenuOptions, saveMenuOptions } = require('../services/saveMenuOptions');
 const { priceAmount } = require('../services/menuPrices');
+const { storeMenuImage, removeMenuImage } = require('../services/menuImages');
 const optionInclude = { model: OptionGroup, as: 'optionGroups', attributes: ['id', 'name', 'min_choices', 'max_choices', 'is_active', 'choices'], through: { attributes: ['sort_order'] } };
 // Public menu responses omit internal ingredient recipes.
 const publicMenu = (menu) => {
@@ -25,8 +26,15 @@ const attachGroups = async (menu, ids, transaction) => {
   await menu.setOptionGroups([], { transaction });
   for (const [index, id] of ids.entries()) await menu.addOptionGroup(id, { through: { sort_order: index }, transaction });
 };
-const path = require('path');
-const fs = require('fs');
+const releaseUnusedImage = async image => {
+  if (!image) return;
+  try {
+    if (!await Menu.count({ where: { image } })) await removeMenuImage(image);
+  } catch (error) {
+    // The DB commit has succeeded; cleanup failure must not report a failed save.
+    console.warn('Unable to check unused menu image:', error.name);
+  }
+};
 
 /**
  * GET /api/menus
@@ -96,6 +104,8 @@ const getMenuById = async (req, res, next) => {
  * Create new menu item (staff only)
  */
 const createMenu = async (req, res, next) => {
+  let image = null;
+  let committed = false;
   try {
     const { category_id, name, description, price } = req.body;
 
@@ -110,7 +120,7 @@ const createMenu = async (req, res, next) => {
     const options = parseMenuOptions(req.body.option_groups);
     if (options !== undefined && req.body.option_group_ids !== undefined) fail('Gunakan satu format pilihan menu.');
     const groupIds = await parseGroups(req.body.option_group_ids);
-    const image = req.file ? `/uploads/menus/${req.file.filename}` : null;
+    image = req.file ? await storeMenuImage(req.file.buffer) : null;
 
     const menu = await sequelize.transaction(async (transaction) => {
       const created = await Menu.create({
@@ -124,6 +134,7 @@ const createMenu = async (req, res, next) => {
       await saveMenuOptions(created, options, transaction);
       return created;
     });
+    committed = true;
 
     const menuWithCategory = await Menu.findByPk(menu.id, {
       include: [{ model: MenuCategory, as: 'category', attributes: ['id', 'name'] }, optionInclude],
@@ -135,6 +146,7 @@ const createMenu = async (req, res, next) => {
       data: publicMenu(menuWithCategory),
     });
   } catch (error) {
+    if (!committed && image) await removeMenuImage(image);
     next(error);
   }
 };
@@ -144,39 +156,33 @@ const createMenu = async (req, res, next) => {
  * Update menu item
  */
 const updateMenu = async (req, res, next) => {
+  let newImage = null;
+  let committed = false;
   try {
-    const menu = await Menu.findByPk(req.params.id);
-    if (!menu) {
-      return res.status(404).json({ success: false, message: 'Menu tidak ditemukan.' });
-    }
-
     const { category_id, name, description, price } = req.body;
     const validPrice = price !== undefined ? priceAmount(price) : undefined;
     const options = parseMenuOptions(req.body.option_groups);
     if (options !== undefined && req.body.option_group_ids !== undefined) fail('Gunakan satu format pilihan menu.');
     const groupIds = await parseGroups(req.body.option_group_ids);
 
-    if (category_id) menu.category_id = category_id;
-    if (name) menu.name = name;
-    if (description !== undefined) menu.description = description;
-    if (validPrice !== undefined) menu.price = validPrice;
-
-    // Handle image update
-    if (req.file) {
-      // Delete old image
-      if (menu.image) {
-        const oldPath = path.join(__dirname, '..', menu.image);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      menu.image = `/uploads/menus/${req.file.filename}`;
-    }
-
-    await sequelize.transaction(async (transaction) => {
-      await Menu.findByPk(menu.id, { transaction, lock: transaction.LOCK.UPDATE });
-      await menu.save({ transaction });
-      await attachGroups(menu, groupIds, transaction);
-      await saveMenuOptions(menu, options, transaction);
+    newImage = req.file ? await storeMenuImage(req.file.buffer) : null;
+    let oldImage;
+    const menu = await sequelize.transaction(async (transaction) => {
+      const current = await Menu.findByPk(req.params.id, { transaction, lock: transaction.LOCK.UPDATE });
+      if (!current) fail('Menu tidak ditemukan.', 404);
+      oldImage = current.image;
+      if (category_id) current.category_id = category_id;
+      if (name) current.name = name;
+      if (description !== undefined) current.description = description;
+      if (validPrice !== undefined) current.price = validPrice;
+      if (newImage) current.image = newImage;
+      await current.save({ transaction });
+      await attachGroups(current, groupIds, transaction);
+      await saveMenuOptions(current, options, transaction);
+      return current;
     });
+    committed = true;
+    if (newImage && oldImage !== newImage) await releaseUnusedImage(oldImage);
 
     const updatedMenu = await Menu.findByPk(menu.id, {
       include: [{ model: MenuCategory, as: 'category', attributes: ['id', 'name'] }, optionInclude],
@@ -188,6 +194,7 @@ const updateMenu = async (req, res, next) => {
       data: publicMenu(updatedMenu),
     });
   } catch (error) {
+    if (!committed && newImage) await removeMenuImage(newImage);
     next(error);
   }
 };
@@ -214,13 +221,9 @@ const deleteMenu = async (req, res, next) => {
     // 2. Hapus resep yang terkait (MenuRecipe) agar tidak ada foreign key error
     await MenuRecipe.destroy({ where: { menu_id: menu.id } });
 
-    // 3. Delete image file
-    if (menu.image) {
-      const imgPath = path.join(__dirname, '..', menu.image);
-      if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-    }
-
+    const image = menu.image;
     await menu.destroy();
+    await releaseUnusedImage(image);
 
     res.json({ success: true, message: 'Menu berhasil dihapus.' });
   } catch (error) {
