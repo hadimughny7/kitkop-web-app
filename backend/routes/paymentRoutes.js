@@ -2,11 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { createQrisPayment, paymentCallback, getPaymentStatus, simulatePayment, payCash } = require('../controllers/paymentController');
 const { verifyToken, authorizeRoles } = require('../middleware/auth');
+const { requirePaymentAccess } = require('../middleware/paymentAccess');
 
-// Public (customer payment)
-router.post('/create-qris', createQrisPayment);
+// Guest order capability or an authenticated payment-authorized staff member.
+router.post('/create-qris', requirePaymentAccess, createQrisPayment);
 router.post('/callback', paymentCallback);
-router.get('/:orderId/status', getPaymentStatus);
+router.get('/:orderId/status', requirePaymentAccess, getPaymentStatus);
 
 // Dev only - simulate payment
 router.post('/:orderId/simulate-pay', simulatePayment);

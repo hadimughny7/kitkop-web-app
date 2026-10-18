@@ -1,6 +1,6 @@
 # Pemeriksaan keamanan lanjutan — 18 Oktober 2026
 
-Checkout: HEAD `d2a30b2` dengan perubahan maintenance/cleanup yang belum di-commit. Ini pemeriksaan terarah dan regresi lokal, bukan sertifikasi keamanan production atau audit seluruh deployment.
+Acuan pemeriksaan awal: HEAD `d2a30b2` dengan perubahan maintenance/cleanup saat itu belum di-commit. Maintenance kemudian disimpan pada commit `4117a60`. Status tindak lanjut B02 diperbarui pada bagian terkait. Ini pemeriksaan terarah dan regresi lokal, bukan sertifikasi keamanan production atau audit seluruh deployment.
 
 ## Hasil validasi
 
@@ -11,7 +11,7 @@ Checkout: HEAD `d2a30b2` dengan perubahan maintenance/cleanup yang belum di-comm
 - Panduan bootstrap database lokal diuji dari contoh kode dokumentasi: schema kosong berhasil, password Owner tersimpan sebagai hash bcrypt yang cocok, percobaan ulang pada schema berisi tabel ditolak tanpa menggandakan akun.
 - Semua mutasi memakai schema MySQL localhost sementara yang dihapus. Build/skrip fixture berada di TEMP. Gateway QRIS diganti mock localhost; tidak ada pembayaran nyata, perubahan database operasional, deployment, atau pengujian terhadap hosting.
 
-## Temuan baru yang masih terbuka
+## Temuan dan status tindak lanjut
 
 ### B01 — Sedang: detail menu publik mengungkap resep dasar dan stok bahan
 
@@ -22,6 +22,10 @@ Lokasi: [menuController.js](../backend/controllers/menuController.js), `getMenuB
 Dampaknya adalah keterbukaan informasi resep/inventori internal; ini bukan bukti kebocoran data pelanggan atau kemampuan mengubah stok. Pisahkan respons menu pelanggan dari detail resep staf, atau hapus resep dasar dari serialisasi publik dan pertahankan endpoint resep terautentikasi untuk pengelola. Tinjau pemakai frontend sebelum mengubah kontrak detail.
 
 ### B02 — Sedang: pembuatan dan pembacaan QRIS belum dibatasi ke pemilik pesanan
+
+**Status: sudah diperbaiki pada tindak lanjut B02.** Bukti berikut merekam kondisi sebelum perbaikan. Endpoint QRIS/status sekarang memakai capability yang terikat ID dan nomor order, atau sesi staf aktif dengan role kasir/manajer/owner. Frontend checkout/retry/polling mengirim token per order. Rincian dan verifikasi: [otorisasi pembayaran](qris-retries.md#otorisasi-per-pesanan-b02).
+
+Regresi setelah perbaikan: **184 tes backend dan 13 tes frontend lulus**, lint 0 error/warning dan build berhasil. Browser production 375/1440 px memeriksa checkout tanpa login, invoice gagal lalu retry, polling, refresh/reuse invoice, Pesan Lagi ke order baru dengan capability baru, dan penolakan token silang. Setiap request pembayaran browser menggunakan capability pesanan yang tepat. Gateway tetap mock lokal; tidak ada pembayaran nyata atau perubahan data operasional.
 
 Pada fixture yang sama, HTTP tracking tanpa token sudah ditolak 403. Namun request anonim `POST /api/payments/create-qris` dengan `order_id` tetap menghasilkan 200, membuat satu panggilan ke mock gateway dan menyimpan invoice. `GET /api/payments/:orderId/status` anonim juga menghasilkan 200, berisi nominal, referensi transaksi dan QRIS invoice tersebut.
 
@@ -43,7 +47,7 @@ Saat `DB_SSL=true`, [config/database.js](../backend/config/database.js) baris 22
 
 Risiko relevan untuk koneksi database melalui jaringan yang memerlukan verifikasi identitas server. Tidak dilakukan serangan jaringan, koneksi hosting, atau pengujian sertifikat provider. Tinjau CA/konfigurasi provider dan aktifkan verifikasi yang sesuai sebelum mengubah deployment; mengganti flag tanpa menyiapkan trust chain dapat memutus koneksi. Rujukan: [panduan TLS OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html).
 
-Temuan B01–B04 dicatat untuk tindak lanjut; perbaikannya belum diterapkan pada putaran cleanup ini.
+Temuan B01, B03, dan B04 masih terbuka. B02 diperbaiki setelah pengguna menyetujui tindak lanjut; tidak memerlukan migrasi database.
 
 ## Keputusan lama dan batas cakupan
 
@@ -53,4 +57,4 @@ Temuan B01–B04 dicatat untuk tindak lanjut; perbaikannya belum diterapkan pada
 - SQL bootstrap lama belum selaras seluruhnya dengan model. Kali ini berkas tetap dipertahankan sebagai referensi historis dan setup baru diarahkan ke model terkini; ini bukan migrasi otomatis untuk semua kemungkinan instalasi lama.
 - Tidak menguji settlement KuyzPay nyata, printer, semua kombinasi perangkat/UI, WAF/reverse proxy, TLS hosting, izin database hosting, pemindaian seluruh history Git, DoS atau brute-force massal. Lulusnya suite regresi tidak meniadakan temuan baru di luar cakupannya.
 
-Prioritas berikutnya: keputusan production F04, otorisasi pembayaran per order (B02), pembatasan resep publik (B01), verifikasi TLS sesuai provider (B04), lalu validasi item malformed (B03).
+Prioritas berikutnya: keputusan production F04, pembatasan resep publik (B01), verifikasi TLS sesuai provider (B04), lalu validasi item malformed (B03).

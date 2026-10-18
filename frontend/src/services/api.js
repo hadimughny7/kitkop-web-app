@@ -147,9 +147,13 @@ export const recipeAPI = {
 // ============================================
 // PAYMENTS
 // ============================================
+const paymentAccess = orderNumber => orderNumber === undefined ? {} : {
+  headers: { 'X-Order-Tracking-Token': getOrderTrackingToken(orderNumber) || '' },
+};
+
 export const paymentAPI = {
-  createQris: (data) => api.post('/payments/create-qris', data),
-  getStatus: (orderId) => api.get(`/payments/${orderId}/status`),
+  createQris: (data, orderNumber) => api.post('/payments/create-qris', data, paymentAccess(orderNumber)),
+  getStatus: (orderId, orderNumber) => api.get(`/payments/${orderId}/status`, paymentAccess(orderNumber)),
   simulatePay: (orderId) => api.post(`/payments/${orderId}/simulate-pay`),
   payCash: (orderId) => api.post(`/payments/${orderId}/cash`),
 };

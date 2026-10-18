@@ -30,6 +30,8 @@ HTTP tracking juga memerlukan token checkout melalui header `X-Order-Tracking-To
 
 Polling lima detik untuk event terlewat mengirim token yang sama. Respons tracking hanya berisi status, waktu, nominal, item, meja, serta nama/telepon untuk mengisi kembali Pesan Lagi. Email, ID pelanggan/kasir, identitas staf, log internal, resep/stok, dan referensi transaksi tidak dikirim. Pesan Lagi dan refresh dalam tab pemesanan tetap didukung.
 
+HTTP pembuatan QRIS dan status pembayaran juga memakai capability per order melalui header yang sama. Backend mencocokkan ID dan nomor order; jalur staf alternatif memerlukan sesi aktif dengan role kasir/manajer/owner. Rincian kontrak, penolakan akses, retry dan deployment ada di [percobaan QRIS](qris-retries.md#otorisasi-per-pesanan-b02).
+
 Tautan lama atau tab/perangkat tanpa token tidak dapat membuka detail hanya dengan nomor pesanan. Halaman menampilkan petunjuk menggunakan tab asal atau menghubungi kasir. Jika sessionStorage diblokir, token disimpan dalam memori agar checkout saat ini tetap berjalan; refresh dalam kondisi tersebut memerlukan bantuan kasir. Token berlaku tujuh hari dan tidak diperpanjang melalui endpoint tracking.
 
 Backend dan frontend perlu dideploy bersama agar klien mengirim kredensial yang diperlukan. Tidak ada migrasi database tambahan untuk pengamanan tracking. Role Barista sudah disamakan pada model, API, dan UI melalui perbaikan F02.

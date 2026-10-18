@@ -58,10 +58,10 @@ const OrderStatusPage = () => {
     if (checkingPayment.current?.orderId === orderId) return checkingPayment.current.promise;
     const request = { orderId };
     checkingPayment.current = request;
-    const fetchPayment = retry ? paymentAPI.createQris({ order_id: orderId })
-      : paymentAPI.getStatus(orderId).catch(err => {
+    const fetchPayment = retry ? paymentAPI.createQris({ order_id: orderId }, orderNumber)
+      : paymentAPI.getStatus(orderId, orderNumber).catch(err => {
         if (err.response?.status !== 404) throw err;
-        return paymentAPI.createQris({ order_id: orderId });
+        return paymentAPI.createQris({ order_id: orderId }, orderNumber);
       });
     request.promise = fetchPayment.then(res => {
       if (checkingPayment.current !== request) return;
@@ -74,7 +74,7 @@ const OrderStatusPage = () => {
       if (checkingPayment.current === request) { checkingPayment.current = null; setRetrying(false); }
     });
     return request.promise;
-  }, [orderId, loadOrder]);
+  }, [orderId, orderNumber, loadOrder]);
 
   const checkOrCreatePayment = (retry = false) => {
     setRetrying(true);
