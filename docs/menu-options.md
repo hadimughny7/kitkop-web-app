@@ -43,6 +43,23 @@ Form menu menerima `option_groups` berupa array definisi opsi (atau JSON string 
 
 Item pesanan menerima `option_ids` dan `expected_price`; harga kiriman klien tidak menjadi sumber harga transaksi.
 
+## Data menu publik dan staf (B01)
+
+Daftar `GET /api/menus` dan detail `GET /api/menus/:id` selalu memakai representasi pelanggan, termasuk ketika request membawa JWT staf atau parameter `include`/`staff`. Representasi dibangun melalui whitelist di `backend/services/publicMenu.js`, tanpa menyebarkan object ORM atau metadata JSON pilihan:
+
+- Menu: `id`, `category_id`, `name`, `description`, `price`, `image`, `is_available`.
+- Kategori: `id`, `name`.
+- Kelompok pilihan: `id`, `name`, `min_choices`, `max_choices`, `is_active`, dan `choices`, sesuai urutan menu.
+- Pilihan: `id`, `name`, `price`, `is_available`, `is_default`.
+
+Resep dasar/tambahan, stok bahan, relasi bahan baku, metadata/junction internal, dan field tambahan yang tidak diizinkan tidak dikirim. Field yang seharusnya scalar juga tidak meneruskan object/array bersarang. Endpoint detail tidak lagi melakukan join resep dasar. Menu tanpa opsi tetap memiliki `optionGroups: []`. Respons create/update menu memakai bentuk publik yang sama; pengelola memuat ulang data internal melalui endpoint staf.
+
+Pemeriksaan seluruh pemakai frontend menemukan bahwa pelanggan mengedit pilihan keranjang melalui `menuAPI.getById`; POS memakai detail yang sama untuk mengedit pilihan. Keduanya hanya membutuhkan field publik di atas. Editor Manajemen Menu memakai `GET /api/menus/:id/options` untuk konfigurasi lengkap, sedangkan StockManagement memakai `GET /api/recipes` untuk resep dan stok bahan. Jalur staf tetap memerlukan JWT/sesi aktif dan mempertahankan izin yang sudah ada; endpoint opsi hanya untuk owner/manajer/kasir. Tidak ada endpoint staf baru atau perubahan izin resep pada perbaikan ini.
+
+Perhitungan harga dan pemakaian stok pada server tetap mengambil resep lengkap dari database dan membuat snapshot pesanan seperti sebelumnya. Tidak ada migrasi database atau perubahan frontend yang diperlukan untuk B01.
+
+Tes `publicMenu.test.js` dan `publicMenus.integration.test.js` memeriksa field internal secara rekursif, metadata JSON bersarang, daftar/detail anonim maupun ber-JWT, batas akses endpoint staf, edit opsi, serta pemotongan stok resep dasar + add-on setelah pembayaran. Regresi browser memakai API asli pada schema localhost sementara untuk edit pilihan pelanggan/POS serta pemuatan dan penyimpanan resep staf.
+
 Daftar template: `GET /api/option-templates` dan `DELETE /api/option-templates/:id` (owner/manajer). Template adalah salinan independen, tanpa foreign key ke menu. Penghapusan menggunakan penanda agar penyimpanan menu berikutnya tidak memunculkan pintasan yang sama lagi.
 
 `max_choices: 0` berarti tanpa batas jumlah pilihan yang tersedia; nilai 1 berarti pilih satu dan nilai positif lain adalah batas maksimal. Tidak memerlukan perubahan skema database.

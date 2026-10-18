@@ -1,18 +1,13 @@
 const { emitRealtime } = require('../socket/realtimeEvents');
-const { Menu, MenuCategory, MenuRecipe, RawMaterial, OrderItem, OptionGroup } = require('../models');
+const { Menu, MenuCategory, MenuRecipe, OrderItem, OptionGroup } = require('../models');
 const { Op } = require('sequelize');
 const { sequelize } = require('../config/database');
 const { fail } = require('../services/menuOptions');
 const { parseMenuOptions, saveMenuOptions } = require('../services/saveMenuOptions');
 const { priceAmount } = require('../services/menuPrices');
 const { storeMenuImage, removeMenuImage } = require('../services/menuImages');
+const publicMenu = require('../services/publicMenu');
 const optionInclude = { model: OptionGroup, as: 'optionGroups', attributes: ['id', 'name', 'min_choices', 'max_choices', 'is_active', 'choices'], through: { attributes: ['sort_order'] } };
-// Public menu responses omit internal ingredient recipes.
-const publicMenu = (menu) => {
-  const data = menu.toJSON();
-  data.optionGroups = (data.optionGroups || []).sort((a,b) => a.MenuOptionGroup.sort_order - b.MenuOptionGroup.sort_order).map((g) => ({ ...g, choices: g.choices.map(({ ingredients, ...choice }) => choice) }));
-  return data;
-};
 const parseGroups = async (value) => {
   if (value === undefined) return undefined;
   let ids;
@@ -71,7 +66,7 @@ const getMenus = async (req, res, next) => {
 
 /**
  * GET /api/menus/:id
- * Get single menu with recipes
+ * Customer menu detail. Internal recipes use the authenticated /api/recipes API.
  */
 const getMenuById = async (req, res, next) => {
   try {
@@ -79,13 +74,6 @@ const getMenuById = async (req, res, next) => {
       include: [
         { model: MenuCategory, as: 'category', attributes: ['id', 'name'] },
         optionInclude,
-        {
-          model: MenuRecipe,
-          as: 'recipes',
-          include: [
-            { model: RawMaterial, as: 'rawMaterial', attributes: ['id', 'name', 'unit', 'stock'] },
-          ],
-        },
       ],
     });
 

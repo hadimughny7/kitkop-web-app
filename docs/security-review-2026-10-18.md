@@ -15,6 +15,10 @@ Acuan pemeriksaan awal: HEAD `d2a30b2` dengan perubahan maintenance/cleanup saat
 
 ### B01 — Sedang: detail menu publik mengungkap resep dasar dan stok bahan
 
+**Status: sudah diperbaiki pada tindak lanjut B01.** Bukti di bawah merekam kondisi sebelum perbaikan. Daftar/detail menu kini memakai whitelist field publik hingga kategori/kelompok/pilihan bersarang; detail tidak lagi mengambil relasi resep dasar. Data resep dan opsi lengkap tetap tersedia lewat endpoint staf yang memerlukan login. Pemeriksaan pemakai frontend dan kontrak respons: [data menu publik dan staf](menu-options.md#data-menu-publik-dan-staf-b01).
+
+Regresi setelah perbaikan: **193 tes backend dan 13 tes frontend lulus**, lint 0 error/warning. Browser 375/1440 px memakai frontend hasil build terkini dengan API asli pada schema MySQL sementara: edit pilihan keranjang pelanggan, edit pilihan POS, tampilan stok/resep staf, serta penyimpanan resep add-on lulus. Respons list/detail diperiksa secara rekursif agar bebas properti internal. Frontend dan database operasional tidak diubah; semua schema fixture sudah dihapus.
+
 Tanpa Authorization, `GET /api/menus/:id` mengembalikan HTTP 200 dengan `recipes[].quantity_used` dan `recipes[].rawMaterial.stock`. Fixture stok `123.45` terlihat pada respons anonim.
 
 Lokasi: [menuController.js](../backend/controllers/menuController.js), `getMenuById` sekitar baris 76–96; [menuRoutes.js](../backend/routes/menuRoutes.js). `publicMenu()` membuang resep tambahan pada pilihan, tetapi belum menghapus `recipes` dasar yang di-include pada detail.
@@ -47,7 +51,7 @@ Saat `DB_SSL=true`, [config/database.js](../backend/config/database.js) baris 22
 
 Risiko relevan untuk koneksi database melalui jaringan yang memerlukan verifikasi identitas server. Tidak dilakukan serangan jaringan, koneksi hosting, atau pengujian sertifikat provider. Tinjau CA/konfigurasi provider dan aktifkan verifikasi yang sesuai sebelum mengubah deployment; mengganti flag tanpa menyiapkan trust chain dapat memutus koneksi. Rujukan: [panduan TLS OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html).
 
-Temuan B01, B03, dan B04 masih terbuka. B02 diperbaiki setelah pengguna menyetujui tindak lanjut; tidak memerlukan migrasi database.
+Temuan B03 dan B04 masih terbuka. B01 dan B02 diperbaiki setelah pengguna menyetujui tindak lanjut; tidak memerlukan migrasi database.
 
 ## Keputusan lama dan batas cakupan
 
@@ -57,4 +61,4 @@ Temuan B01, B03, dan B04 masih terbuka. B02 diperbaiki setelah pengguna menyetuj
 - SQL bootstrap lama belum selaras seluruhnya dengan model. Kali ini berkas tetap dipertahankan sebagai referensi historis dan setup baru diarahkan ke model terkini; ini bukan migrasi otomatis untuk semua kemungkinan instalasi lama.
 - Tidak menguji settlement KuyzPay nyata, printer, semua kombinasi perangkat/UI, WAF/reverse proxy, TLS hosting, izin database hosting, pemindaian seluruh history Git, DoS atau brute-force massal. Lulusnya suite regresi tidak meniadakan temuan baru di luar cakupannya.
 
-Prioritas berikutnya: keputusan production F04, pembatasan resep publik (B01), verifikasi TLS sesuai provider (B04), lalu validasi item malformed (B03).
+Prioritas berikutnya: keputusan production F04, verifikasi TLS sesuai provider (B04), lalu validasi item malformed (B03).
