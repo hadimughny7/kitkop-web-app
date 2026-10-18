@@ -1,60 +1,32 @@
-/**
- * Migration: Add settings table and service_charge column to orders
- * 
- * Run this once: node migrations/add-settings-and-service-charge.js
- */
+const { DataTypes } = require('sequelize');
 const { sequelize } = require('../config/database');
+const Setting = require('../models/Setting');
 
+// Shared by startup and the administrative CLI. Never overwrite configured rates.
 const migrate = async () => {
-  try {
-    await sequelize.authenticate();
-    console.log('✅ Connected to database');
-
-    // 1. Create settings table
-    console.log('🔄 Creating settings table...');
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS settings (
-        \`key\` VARCHAR(50) NOT NULL PRIMARY KEY,
-        value VARCHAR(255) NOT NULL,
-        description VARCHAR(255) NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('  ✅ settings table created');
-
-    // 2. Insert default settings
-    console.log('🔄 Inserting default settings...');
-    await sequelize.query(`
-      INSERT IGNORE INTO settings (\`key\`, value, description) VALUES 
-        ('tax_percentage', '10', 'Persentase pajak (%)'),
-        ('service_charge_percentage', '0', 'Persentase service charge (%)')
-    `);
-    console.log('  ✅ Default settings inserted');
-
-    // 3. Add service_charge column to orders table
-    console.log('🔄 Adding service_charge column to orders...');
+  await Setting.sync();
+  const query = sequelize.getQueryInterface();
+  const columns = await query.describeTable('orders');
+  if (!columns.service_charge) {
     try {
-      await sequelize.query(`
-        ALTER TABLE orders 
-        ADD COLUMN service_charge DECIMAL(12, 2) NOT NULL DEFAULT 0
-        AFTER tax
-      `);
-      console.log('  ✅ service_charge column added');
-    } catch (err) {
-      if (err.original?.code === 'ER_DUP_FIELDNAME') {
-        console.log('  ⚠️ service_charge column already exists, skipping');
-      } else {
-        throw err;
-      }
+      await query.addColumn('orders', 'service_charge', {
+        type: DataTypes.DECIMAL(12, 2), allowNull: false, defaultValue: 0,
+        after: 'tax',
+      });
+    } catch (error) {
+      // Another instance may have added the column after describeTable().
+      if (error.original?.code !== 'ER_DUP_FIELDNAME') throw error;
     }
-
-    console.log('\n🎉 Migration completed successfully!');
-    process.exit(0);
-  } catch (error) {
-    console.error('❌ Migration failed:', error.message);
-    process.exit(1);
   }
+  await sequelize.transaction(transaction => Setting.bulkCreate([
+    { key: 'tax_percentage', value: '10', description: 'Persentase pajak (%)' },
+    { key: 'service_charge_percentage', value: '0', description: 'Persentase service charge (%)' },
+  ], { ignoreDuplicates: true, transaction }));
 };
 
-migrate();
+module.exports = migrate;
+if (require.main === module) {
+  migrate().then(() => console.log('Settings migration complete.'))
+    .catch(error => { console.error(error.message); process.exitCode = 1; })
+    .finally(() => sequelize.close());
+}

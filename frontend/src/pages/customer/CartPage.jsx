@@ -1,7 +1,7 @@
 import MenuOptionPicker from '../../components/MenuOptionPicker';
 import { optionText } from '../../utils/menuOptions';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../context/useCart';
 import { orderAPI, menuAPI } from '../../services/api';
 import { HiOutlineArrowLeft, HiOutlineTrash, HiOutlineShoppingCart, HiOutlineCake, HiOutlineInformationCircle } from 'react-icons/hi';
 import toast from 'react-hot-toast';

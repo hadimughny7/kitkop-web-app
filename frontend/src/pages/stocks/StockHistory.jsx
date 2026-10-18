@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { stockAPI } from '../../services/api';
 import { createStaffSocket } from '../../services/socket';
 import toast from 'react-hot-toast';
@@ -34,9 +34,21 @@ const StockHistory = () => {
   const [filterType, setFilterType] = useState('all');
   const [expandedOrders, setExpandedOrders] = useState(new Set());
 
-  useEffect(() => {
-    loadData();
+  const historyRequest = useRef(0);
+  const loadData = useCallback(() => {
+    const request = ++historyRequest.current;
+    const params = { date: selectedDate };
+    if (filterType !== 'all') params.type = filterType;
+    return stockAPI.getLogsByDate(params).then(res => {
+      if (request !== historyRequest.current) return;
+      setData(res.data.data);
+      setExpandedOrders(new Set(res.data.data.byOrder.slice(0, 3).map(group => group.order.id)));
+    }).catch(() => {
+      if (request === historyRequest.current) toast.error('Gagal memuat riwayat stok.');
+    }).finally(() => { if (request === historyRequest.current) setLoading(false); });
   }, [selectedDate, filterType]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   // Realtime: listen for stock changes via socket
   useEffect(() => {
@@ -54,29 +66,7 @@ const StockHistory = () => {
     socket.on('order-status-update', handleUpdate);
 
     return () => socket.disconnect();
-  }, [selectedDate, filterType]);
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const params = { date: selectedDate };
-      if (filterType !== 'all') params.type = filterType;
-      const res = await stockAPI.getLogsByDate(params);
-      setData(res.data.data);
-
-      // Auto-expand first 3 orders
-      if (res.data.data.byOrder.length > 0) {
-        const firstIds = new Set(
-          res.data.data.byOrder.slice(0, 3).map((g) => g.order.id)
-        );
-        setExpandedOrders(firstIds);
-      }
-    } catch (err) {
-      toast.error('Gagal memuat riwayat stok.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedDate, loadData]);
 
   const navigateDate = (delta) => {
     const d = new Date(selectedDate + 'T00:00:00');

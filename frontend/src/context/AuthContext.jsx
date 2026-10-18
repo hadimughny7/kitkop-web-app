@@ -1,19 +1,20 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { AuthContext } from './authStore';
 import { authAPI } from '../services/api';
 import { disconnectStaffSockets } from '../services/socket';
-
-const AuthContext = createContext(null);
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-};
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('kitkop_token'));
   const [loading, setLoading] = useState(true);
+
+  const logout = useCallback(() => {
+    disconnectStaffSockets();
+    localStorage.removeItem('kitkop_token');
+    localStorage.removeItem('kitkop_user');
+    setToken(null);
+    setUser(null);
+  }, []);
 
   useEffect(() => {
     const endSession = event => {
@@ -51,7 +52,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     };
     initAuth();
-  }, [token]);
+  }, [token, logout]);
 
   const login = async (credentials) => {
     const res = await authAPI.login(credentials);
@@ -61,14 +62,6 @@ export const AuthProvider = ({ children }) => {
     setToken(newToken);
     setUser(userData);
     return userData;
-  };
-
-  const logout = () => {
-    disconnectStaffSockets();
-    localStorage.removeItem('kitkop_token');
-    localStorage.removeItem('kitkop_user');
-    setToken(null);
-    setUser(null);
   };
 
   const hasRole = (...roles) => {

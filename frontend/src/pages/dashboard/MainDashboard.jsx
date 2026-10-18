@@ -8,19 +8,18 @@ const MainDashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const loadDashboard = async () => {
+      try {
+        const res = await reportAPI.getDashboard();
+        setStats(res.data.data);
+      } catch (err) {
+        console.error('Failed to load dashboard:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
     loadDashboard();
   }, []);
-
-  const loadDashboard = async () => {
-    try {
-      const res = await reportAPI.getDashboard();
-      setStats(res.data.data);
-    } catch (err) {
-      console.error('Failed to load dashboard:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('id-ID', {

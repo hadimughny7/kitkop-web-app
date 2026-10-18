@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { userAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch } from 'react-icons/hi';
 import './UserManagement.css';
@@ -19,17 +19,16 @@ const UserManagement = () => {
   const canDelete = (target) => target.id !== user?.id && (isOwner || managedRoles.includes(target.role));
   const editingOwnManagerProfile = !isOwner && editUser?.id === user?.id;
 
-  useEffect(() => { loadUsers(); }, []);
+  const userRequest = useRef(0);
+  const loadUsers = useCallback(() => {
+    const request = ++userRequest.current;
+    return userAPI.getAll({ search })
+      .then(res => { if (request === userRequest.current) setUsers(res.data.data); })
+      .catch(() => { if (request === userRequest.current) toast.error('Gagal memuat data.'); })
+      .finally(() => { if (request === userRequest.current) setLoading(false); });
+  }, [search]);
 
-  const loadUsers = async () => {
-    try {
-      const res = await userAPI.getAll({ search });
-      setUsers(res.data.data);
-    } catch (err) { toast.error('Gagal memuat data.'); }
-    finally { setLoading(false); }
-  };
-
-  useEffect(() => { loadUsers(); }, [search]);
+  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const openCreate = () => { setEditUser(null); setForm({ name: '', email: '', username: '', password: '', role: 'kasir' }); setShowModal(true); };
   const openEdit = (user) => { setEditUser(user); setForm({ name: user.name, email: user.email, username: user.username, password: '', role: user.role }); setShowModal(true); };

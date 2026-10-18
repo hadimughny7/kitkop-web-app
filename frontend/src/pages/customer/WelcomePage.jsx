@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { tableAPI } from '../../services/api';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../context/useCart';
 import toast from 'react-hot-toast';
 import { HiOutlineQrcode, HiOutlineArrowRight } from 'react-icons/hi';
 import './CustomerPages.css';
@@ -9,7 +9,6 @@ import './CustomerPages.css';
 const WelcomePage = () => {
   const [searchParams] = useSearchParams();
   const tableNum = searchParams.get('table');
-  const [table, setTable] = useState(null);
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -19,26 +18,19 @@ const WelcomePage = () => {
   const { setTableNumber, setTableId, setCustomerInfo } = useCart();
 
   useEffect(() => {
-    if (!tableNum) {
-      setError('Nomor meja tidak ditemukan. Silakan scan QR code yang benar.');
-      setLoading(false);
-      return;
-    }
-    loadTable();
-  }, [tableNum]);
-
-  const loadTable = async () => {
-    try {
-      const res = await tableAPI.getByNumber(tableNum);
-      setTable(res.data.data);
+    if (!tableNum) return;
+    let active = true;
+    tableAPI.getByNumber(tableNum).then(res => {
+      if (!active) return;
       setTableNumber(tableNum);
       setTableId(res.data.data.id);
-    } catch {
+      setError('');
+    }).catch(() => {
+      if (!active) return;
       setError('Meja tidak ditemukan atau tidak aktif.');
-    } finally {
-      setLoading(false);
-    }
-  };
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [tableNum, setTableNumber, setTableId]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -51,7 +43,7 @@ const WelcomePage = () => {
     navigate(`/order/menu?table=${tableNum}`);
   };
 
-  if (loading) {
+  if (tableNum && loading) {
     return (
       <div className="customer-page">
         <div className="loading-screen">
@@ -62,14 +54,14 @@ const WelcomePage = () => {
     );
   }
 
-  if (error) {
+  if (!tableNum || error) {
     return (
       <div className="customer-page">
         <div className="customer-container">
           <div className="error-card">
             <HiOutlineQrcode className="error-icon" aria-hidden="true" />
             <h2>Periksa QR meja Anda</h2>
-            <p>{error}</p>
+            <p>{!tableNum ? 'Nomor meja tidak ditemukan. Silakan scan QR code yang benar.' : error}</p>
           </div>
         </div>
       </div>

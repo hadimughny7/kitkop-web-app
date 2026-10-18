@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { tableAPI } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 import {
   HiOutlinePlus,
@@ -25,21 +25,12 @@ const TableManagement = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [selectedTable, setSelectedTable] = useState(null);
 
-  useEffect(() => {
-    loadTables();
-  }, []);
+  const loadTables = useCallback(() => tableAPI.getAll()
+    .then(res => setTables(res.data.data))
+    .catch(() => toast.error('Gagal memuat data meja.'))
+    .finally(() => setLoading(false)), []);
 
-  const loadTables = async () => {
-    setLoading(true);
-    try {
-      const res = await tableAPI.getAll();
-      setTables(res.data.data);
-    } catch {
-      toast.error('Gagal memuat data meja.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  useEffect(() => { loadTables(); }, [loadTables]);
 
   const handleTableSubmit = async (e) => {
     e.preventDefault();

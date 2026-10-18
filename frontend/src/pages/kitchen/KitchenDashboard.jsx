@@ -14,21 +14,18 @@ const KitchenDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  const loadOrders = useCallback(async () => {
-    try {
-      const [incoming, preparing, completed] = await Promise.all([
+  const loadOrders = useCallback(() => Promise.all([
         fetchAllOrders(orderAPI.getAll, { status: 'confirmed' }),
         fetchAllOrders(orderAPI.getAll, { status: 'preparing' }),
         fetchAllOrders(orderAPI.getAll, { status: 'completed', date: getWibDate() }),
-      ]);
+      ]).then(([incoming, preparing, completed]) => {
       setOrders([...incoming, ...preparing, ...completed]);
       setError('');
-    } catch {
+    }).catch(() => {
       setError('Pesanan belum dapat diperbarui. Silakan tekan Refresh.');
-    } finally {
+    }).finally(() => {
       setLoading(false);
-    }
-  }, []);
+    }), []);
 
   useEffect(() => {
     loadOrders();
@@ -65,7 +62,7 @@ const KitchenDashboard = () => {
       await orderAPI.processAllItems(orderId);
       toast.success('Semua item mulai diproses');
       loadOrders();
-    } catch (err) {
+    } catch {
       toast.error('Gagal memproses semua item');
     }
   };
@@ -76,19 +73,8 @@ const KitchenDashboard = () => {
       await orderAPI.completeAllItems(orderId);
       toast.success('Semua item selesai! ✓');
       loadOrders();
-    } catch (err) {
+    } catch {
       toast.error('Gagal menyelesaikan semua item');
-    }
-  };
-
-  const handleRejectItem = async (orderId, itemId) => {
-    if (!window.confirm('Apakah Anda yakin ingin menolak menu ini?')) return;
-    try {
-      await orderAPI.rejectItem(orderId, itemId);
-      toast.success('Menu berhasil ditolak');
-      loadOrders();
-    } catch (err) {
-      toast.error('Gagal menolak menu');
     }
   };
 

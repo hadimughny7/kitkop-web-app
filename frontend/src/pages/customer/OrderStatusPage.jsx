@@ -1,10 +1,10 @@
 import { optionText } from '../../utils/menuOptions';
 import '../../components/MenuOptions.css';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI, paymentAPI } from '../../services/api';
 import { HiCheck, HiOutlineClock, HiOutlineRefresh, HiOutlineX, HiOutlineExclamation } from 'react-icons/hi';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../context/useCart';
 import { createOrderSocket } from '../../services/socket';
 import { getOrderTrackingToken } from '../../services/orderTracking';
 import toast from 'react-hot-toast';
@@ -24,138 +24,93 @@ const OrderStatusPage = () => {
   const { tableNumber, clearCart, setTableNumber, setTableId, setCustomerInfo } = useCart();
   const [order, setOrder] = useState(null);
   const [orderError, setOrderError] = useState('');
-  const [payment, setPayment] = useState(null);
-  const [paymentError, setPaymentError] = useState('');
-  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentResult, setPaymentResult] = useState({ orderId: null, data: null, error: '' });
+  const [retrying, setRetrying] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(Date.now);
+  const orderRequest = useRef(0);
+  const checkingPayment = useRef(null);
+  const payment = paymentResult.orderId === order?.id ? paymentResult.data : null;
+  const paymentError = paymentResult.orderId === order?.id ? paymentResult.error : '';
+  const paymentLoading = retrying || (order?.status === 'pending' && paymentResult.orderId !== order.id);
+  const deadline = order?.status === 'pending' ? new Date(order.created_at).getTime() + 10 * 60 * 1000 : null;
+  const timeLeft = deadline === null ? null : Math.max(0, Math.floor((deadline - now) / 1000));
 
-  const [timeLeft, setTimeLeft] = useState(null);
-
-  const PAYMENT_TIMEOUT_MINUTES = 10;
-
-  useEffect(() => {
-    loadOrder();
-    const socket = createOrderSocket(orderNumber, getOrderTrackingToken(orderNumber));
-    if (!socket) return; // HTTP tracking also requires the checkout token.
-    socket.on('connect', loadOrder);
-
-    socket.on('order-status-update', () => {
-      loadOrder();
-    });
-
-    socket.on('order-item-update', () => {
-      loadOrder();
-    });
-
-    socket.on('payment-success', () => {
-      toast.success('Pembayaran berhasil!');
-      loadOrder();
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [orderNumber]);
-
-  useEffect(() => {
-    if (order && order.status === 'pending') {
-      checkOrCreatePayment();
-    }
-  }, [order]);
-
-  // Authenticated polling covers missed realtime events.
-  useEffect(() => {
-    if (!order || ['completed', 'cancelled'].includes(order.status)) return;
-
-    const pollInterval = setInterval(async () => {
-      try {
-        await loadOrder();
-      } catch (err) {
-        // ignore
-      }
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [order]);
-
-  // Countdown timer for pending orders
-  useEffect(() => {
-    if (!order || order.status !== 'pending') {
-      setTimeLeft(null);
-      return;
-    }
-
-    const calcTimeLeft = () => {
-      const createdAt = new Date(order.created_at).getTime();
-      const deadline = createdAt + PAYMENT_TIMEOUT_MINUTES * 60 * 1000;
-      const remaining = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
-      return remaining;
-    };
-
-    setTimeLeft(calcTimeLeft());
-
-    const timer = setInterval(() => {
-      const remaining = calcTimeLeft();
-      setTimeLeft(remaining);
-      if (remaining <= 0) {
-        clearInterval(timer);
-        loadOrder(); // Reload — backend should have cancelled it
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [order]);
-
-  const loadOrder = async () => {
-    try {
-      const res = await orderAPI.track(orderNumber);
+  const loadOrder = useCallback(() => {
+    const request = ++orderRequest.current;
+    return orderAPI.track(orderNumber).then(res => {
+      if (request !== orderRequest.current) return;
       setOrder(res.data.data);
+      setNow(Date.now());
       setOrderError('');
-    } catch (err) {
+    }).catch(err => {
+      if (request !== orderRequest.current) return;
       setOrder(null);
       setOrderError(err.response?.status === 403
         ? 'Akses pesanan tidak tersedia. Buka dari tab tempat Anda membuat pesanan atau hubungi kasir.'
         : err.response?.status === 404 ? 'Pesanan tidak ditemukan.' : 'Status pesanan belum dapat dimuat. Silakan coba lagi.');
-    } finally {
-      setLoading(false);
-    }
+    }).finally(() => { if (request === orderRequest.current) setLoading(false); });
+  }, [orderNumber]);
+
+  const orderId = order?.id;
+  const requestPayment = useCallback((retry = false) => {
+    if (!orderId) return Promise.resolve();
+    if (checkingPayment.current?.orderId === orderId) return checkingPayment.current.promise;
+    const request = { orderId };
+    checkingPayment.current = request;
+    const fetchPayment = retry ? paymentAPI.createQris({ order_id: orderId })
+      : paymentAPI.getStatus(orderId).catch(err => {
+        if (err.response?.status !== 404) throw err;
+        return paymentAPI.createQris({ order_id: orderId });
+      });
+    request.promise = fetchPayment.then(res => {
+      if (checkingPayment.current !== request) return;
+      setPaymentResult({ orderId, data: res.data.data, error: '' });
+      if (res.data.data.status === 'paid') loadOrder();
+    }).catch(err => {
+      if (checkingPayment.current !== request) return;
+      setPaymentResult({ orderId, data: null, error: err.response?.data?.message || 'QRIS belum dapat dimuat. Silakan coba lagi.' });
+    }).finally(() => {
+      if (checkingPayment.current === request) { checkingPayment.current = null; setRetrying(false); }
+    });
+    return request.promise;
+  }, [orderId, loadOrder]);
+
+  const checkOrCreatePayment = (retry = false) => {
+    setRetrying(true);
+    return requestPayment(retry);
   };
 
-  const checkingPayment = useRef(false);
+  useEffect(() => {
+    loadOrder();
+    const socket = createOrderSocket(orderNumber, getOrderTrackingToken(orderNumber));
+    if (!socket) return;
+    socket.on('connect', loadOrder);
+    socket.on('order-status-update', loadOrder);
+    socket.on('order-item-update', loadOrder);
+    socket.on('payment-success', () => { toast.success('Pembayaran berhasil!'); loadOrder(); });
+    return () => socket.disconnect();
+  }, [orderNumber, loadOrder]);
 
-  const checkOrCreatePayment = async (retry = false) => {
-    if (!order) return;
-    if (checkingPayment.current) return;
-    checkingPayment.current = true;
-    setPaymentLoading(true);
-    try {
-      const res = retry ? await paymentAPI.createQris({ order_id: order.id }) : await paymentAPI.getStatus(order.id);
-      setPayment(res.data.data);
-      setPaymentError('');
+  useEffect(() => {
+    if (order?.status === 'pending') requestPayment();
+  }, [order, requestPayment]);
 
-      // If status check reveals payment was already made, reload order
-      if (res.data.data.status === 'paid') {
-        loadOrder();
-      }
-    } catch (err) {
-      if (err.response?.status === 404) {
-        try {
-          const createRes = await paymentAPI.createQris({ order_id: order.id });
-          setPayment(createRes.data.data);
-          setPaymentError('');
-        } catch (createErr) {
-          setPaymentError(createErr.response?.data?.message || 'QRIS belum dapat dibuat. Silakan coba lagi.');
-        }
-      } else {
-        setPaymentError(err.response?.data?.message || 'QRIS belum dapat dimuat. Silakan coba lagi.');
-      }
-    } finally {
-      checkingPayment.current = false;
-      setPaymentLoading(false);
-    }
-  };
+  useEffect(() => {
+    if (!order || ['completed', 'cancelled'].includes(order.status)) return;
+    const timer = setInterval(loadOrder, 5000);
+    return () => clearInterval(timer);
+  }, [order, loadOrder]);
 
-
+  useEffect(() => {
+    if (deadline === null) return;
+    const timer = setInterval(() => {
+      const current = Date.now();
+      setNow(current);
+      if (current >= deadline) { clearInterval(timer); loadOrder(); }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [deadline, loadOrder]);
 
   const handleSimulatePayment = async () => {
     if (!order) return;
@@ -163,7 +118,7 @@ const OrderStatusPage = () => {
       await paymentAPI.simulatePay(order.id);
       toast.success('Pembayaran berhasil disimulasikan!');
       loadOrder();
-    } catch (err) {
+    } catch {
       toast.error('Gagal simulasi pembayaran');
     }
   };
@@ -447,4 +402,7 @@ const OrderStatusPage = () => {
   );
 };
 
-export default OrderStatusPage;
+export default function OrderStatusRoute() {
+  const { orderNumber } = useParams();
+  return <OrderStatusPage key={orderNumber} />;
+}

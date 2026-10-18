@@ -1,7 +1,7 @@
 import MenuOptionsEditor from './MenuOptionsEditor';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { menuAPI, categoryAPI, stockAPI, optionTemplateAPI, BACKEND_URL } from '../../services/api';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineTag } from 'react-icons/hi';
 import './MenuManagement.css';
@@ -18,7 +18,8 @@ const MenuManagement = () => {
   const [saving, setSaving] = useState(false);
   const [menus, setMenus] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState({ menus: false, categories: false });
+  const loading = !loaded.menus || !loaded.categories;
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const { hasRole } = useAuth();
@@ -37,30 +38,20 @@ const MenuManagement = () => {
   const [catForm, setCatForm] = useState({ name: '', description: '' });
 
   useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    loadMenus();
-  }, [search, categoryFilter]);
-
-  const loadData = async () => {
-    setLoading(true);
-    await Promise.all([loadMenus(), loadCategories(), loadTemplates()]);
-    setLoading(false);
-  };
-
-  useEffect(() => {
     if (!isManager) return;
     stockAPI.getAll().then((res) => setMaterials(res.data.data)).catch(() => toast.error('Daftar bahan belum dapat dimuat.'));
   }, [isManager]);
 
-  const loadTemplates = async () => {
+  const fetchTemplates = useCallback(() => {
     if (!isManager) return;
+    return optionTemplateAPI.getAll()
+      .then(res => { setTemplates(res.data.data); setTemplatesError(''); })
+      .catch(() => setTemplatesError('Daftar add-on belum dapat dimuat.'))
+      .finally(() => setTemplatesLoading(false));
+  }, [isManager]);
+  const loadTemplates = () => {
     setTemplatesLoading(true); setTemplatesError('');
-    try { const res = await optionTemplateAPI.getAll(); setTemplates(res.data.data); }
-    catch { setTemplatesError('Daftar add-on belum dapat dimuat.'); }
-    finally { setTemplatesLoading(false); }
+    return fetchTemplates();
   };
   const deleteTemplate = async (template) => {
     setDeletingTemplate(template.id);
@@ -72,19 +63,23 @@ const MenuManagement = () => {
     finally { setDeletingTemplate(null); }
   };
 
-  const loadMenus = async () => {
-    try {
-      const res = await menuAPI.getAll({ search, category_id: categoryFilter });
-      setMenus(res.data.data);
-    } catch (err) { toast.error('Gagal memuat menu.'); }
-  };
+  const menuRequest = useRef(0);
+  const loadMenus = useCallback(() => {
+    const request = ++menuRequest.current;
+    return menuAPI.getAll({ search, category_id: categoryFilter })
+      .then(res => { if (request === menuRequest.current) setMenus(res.data.data); })
+      .catch(() => { if (request === menuRequest.current) toast.error('Gagal memuat menu.'); })
+      .finally(() => { if (request === menuRequest.current) setLoaded(prev => ({ ...prev, menus: true })); });
+  }, [search, categoryFilter]);
 
-  const loadCategories = async () => {
-    try {
-      const res = await categoryAPI.getAll();
-      setCategories(res.data.data);
-    } catch (err) { toast.error('Gagal memuat kategori.'); }
-  };
+  const loadCategories = useCallback(() => categoryAPI.getAll()
+    .then(res => setCategories(res.data.data))
+    .catch(() => toast.error('Gagal memuat kategori.'))
+    .finally(() => setLoaded(prev => ({ ...prev, categories: true }))), []);
+
+  useEffect(() => { loadMenus(); }, [loadMenus]);
+  useEffect(() => { loadCategories(); }, [loadCategories]);
+  useEffect(() => { fetchTemplates(); }, [fetchTemplates]);
 
   const formatCurrency = (val) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val);
 
@@ -159,7 +154,7 @@ const MenuManagement = () => {
       await menuAPI.toggleAvailability(id);
       toast.success('Status menu diperbarui.');
       loadMenus();
-    } catch (err) { toast.error('Gagal update status menu.'); }
+    } catch { toast.error('Gagal update status menu.'); }
   };
 
   // Category Handlers

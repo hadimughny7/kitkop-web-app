@@ -1,6 +1,6 @@
 import { optionText } from '../../utils/menuOptions';
 import '../../components/MenuOptions.css';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { orderAPI, paymentAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -39,41 +39,35 @@ const OrderDashboard = () => {
   const [printOrder, setPrintOrder] = useState(null);
   const receiptRef = useRef(null);
 
-  useEffect(() => {
-    loadOrders().then(() => setLoading(false));
-  }, []);
-
-  const loadOrders = async () => {
-    try {
-      const params = {};
-      if (statusFilter !== 'all') params.status = statusFilter;
-      if (typeFilter !== 'all') params.order_type = typeFilter;
-      if (dateFilter) params.date = dateFilter;
-      params.limit = 200;
-      const res = await orderAPI.getAll(params);
-      setOrders(res.data.data);
-    } catch (err) {
-      toast.error('Gagal memuat pesanan.');
-    }
-  };
+  const orderRequest = useRef(0);
+  const loadOrders = useCallback(() => {
+    const request = ++orderRequest.current;
+    const params = { limit: 200 };
+    if (statusFilter !== 'all') params.status = statusFilter;
+    if (typeFilter !== 'all') params.order_type = typeFilter;
+    if (dateFilter) params.date = dateFilter;
+    return orderAPI.getAll(params)
+      .then(res => { if (request === orderRequest.current) setOrders(res.data.data); })
+      .catch(() => { if (request === orderRequest.current) toast.error('Gagal memuat pesanan.'); })
+      .finally(() => { if (request === orderRequest.current) setLoading(false); });
+  }, [statusFilter, typeFilter, dateFilter]);
 
   useEffect(() => {
     loadOrders();
-  }, [search, statusFilter, typeFilter, dateFilter]);
+  }, [loadOrders]);
 
   useEffect(() => {
     const socket = createStaffSocket();
-
-    socket.on('new-order', () => {
-      setTimeout(() => loadOrders(), 300);
-    });
-    socket.on('order-status-update', () => setTimeout(() => loadOrders(), 300));
-    socket.on('payment-success', () => {
-      setTimeout(() => loadOrders(), 300);
-    });
-
-    return () => socket.disconnect();
-  }, []);
+    let timer;
+    const refresh = () => {
+      clearTimeout(timer);
+      timer = setTimeout(loadOrders, 300);
+    };
+    socket.on('new-order', refresh);
+    socket.on('order-status-update', refresh);
+    socket.on('payment-success', refresh);
+    return () => { clearTimeout(timer); socket.disconnect(); };
+  }, [loadOrders]);
 
   const formatCurrency = (val) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
@@ -105,7 +99,7 @@ const OrderDashboard = () => {
       await orderAPI.updateStatus(id, status);
       toast.success('Status pesanan diperbarui.');
       loadOrders();
-    } catch (err) {
+    } catch {
       toast.error('Gagal update status.');
     }
   };

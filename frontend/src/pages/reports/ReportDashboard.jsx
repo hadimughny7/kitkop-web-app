@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { reportAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -67,6 +67,26 @@ const getStockLabel = (status) => {
   return 'Habis';
 };
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: 'var(--surface-primary)',
+        border: '1px solid var(--neutral-200)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 'var(--space-3) var(--space-4)',
+        boxShadow: 'var(--shadow-lg)',
+      }}>
+        <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)', color: 'var(--neutral-800)' }}>{label}</p>
+        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--primary-600)' }}>
+          Penjualan: {formatCurrency(payload[0]?.value)}
+        </p>
+      </div>
+    );
+  }
+  return null;
+};
+
 const ReportDashboard = () => {
   const [period, setPeriod] = useState('monthly');
   const [customStart, setCustomStart] = useState('');
@@ -83,19 +103,18 @@ const ReportDashboard = () => {
     return { period };
   }, [period, customStart, customEnd]);
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const params = buildParams();
-      const res = await reportAPI.getReportDashboard(params);
+  const reportRequest = useRef(0);
+  const loadData = useCallback(() => {
+    const request = ++reportRequest.current;
+    return reportAPI.getReportDashboard(buildParams()).then(res => {
+      if (request !== reportRequest.current) return;
       setData(res.data.data);
-    } catch (err) {
+      setError(false);
+    }).catch(err => {
+      if (request !== reportRequest.current) return;
       console.error('Failed to load report dashboard:', err);
       setError(true);
-    } finally {
-      setLoading(false);
-    }
+    }).finally(() => { if (request === reportRequest.current) setLoading(false); });
   }, [buildParams]);
 
   useEffect(() => {
@@ -153,26 +172,6 @@ const ReportDashboard = () => {
         transactions: parseInt(item.transactions) || 0,
       };
     });
-  };
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{
-          background: 'var(--surface-primary)',
-          border: '1px solid var(--neutral-200)',
-          borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-3) var(--space-4)',
-          boxShadow: 'var(--shadow-lg)',
-        }}>
-          <p style={{ fontWeight: 600, fontSize: 'var(--text-sm)', marginBottom: 'var(--space-1)', color: 'var(--neutral-800)' }}>{label}</p>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--primary-600)' }}>
-            Penjualan: {formatCurrency(payload[0]?.value)}
-          </p>
-        </div>
-      );
-    }
-    return null;
   };
 
   // ============================================
@@ -234,7 +233,6 @@ const ReportDashboard = () => {
   const topMenus = data?.topMenus || [];
   const stockStatus = data?.stockStatus || [];
   const dailySales = data?.dailySales || [];
-  const hasData = dailySales.length > 0 || chartDataFormatted.length > 0;
 
   // ============================================
   // RENDER — Main Dashboard

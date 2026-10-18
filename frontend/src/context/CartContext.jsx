@@ -1,14 +1,7 @@
 import { makeCartItem, addCartLine, replaceCartLine } from '../utils/menuOptions';
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { CartContext } from './cartStore';
 import { settingAPI } from '../services/api';
-
-const CartContext = createContext(null);
-
-export const useCart = () => {
-  const context = useContext(CartContext);
-  if (!context) throw new Error('useCart must be used within CartProvider');
-  return context;
-};
 
 export const CartProvider = ({ children }) => {
   const [items, setItems] = useState([]);
@@ -26,7 +19,7 @@ export const CartProvider = ({ children }) => {
         const data = res.data.data;
         if (data.tax_percentage !== undefined) setTaxPercent(parseFloat(data.tax_percentage));
         if (data.service_charge_percentage !== undefined) setServicePercent(parseFloat(data.service_charge_percentage));
-      } catch (err) {
+      } catch {
         // Fallback to defaults silently
       }
     };

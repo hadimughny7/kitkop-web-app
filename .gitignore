@@ -34,8 +34,16 @@ Thumbs.db
 # Upload files (gambar menu dll - opsional, bisa di-push jika ingin)
 # backend/uploads/
 
-# Database dumps (uncomment jika tidak ingin push file SQL besar)
-# database/*.sql
+# Local database backups; keep schema, seed and migration SQL versioned.
+**/local_backup*.sql
+**/local_backup*.sql.gz
+**/local_backup*.sql.zip
+/backups/
+/backend/backups/
+/database/backups/
+
+# Local development tunnel; install/manage separately from application source.
+/backend/ngrok.exe
 
 # Misc
 *.local

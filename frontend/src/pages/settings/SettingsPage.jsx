@@ -10,21 +10,20 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await settingAPI.getAll();
+        const data = res.data.data;
+        setTaxPercent(data.tax_percentage ?? '10');
+        setServicePercent(data.service_charge_percentage ?? '0');
+      } catch {
+        toast.error('Gagal memuat pengaturan.');
+      } finally {
+        setLoading(false);
+      }
+    };
     loadSettings();
   }, []);
-
-  const loadSettings = async () => {
-    try {
-      const res = await settingAPI.getAll();
-      const data = res.data.data;
-      setTaxPercent(data.tax_percentage ?? '10');
-      setServicePercent(data.service_charge_percentage ?? '0');
-    } catch (err) {
-      toast.error('Gagal memuat pengaturan.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSave = async (e) => {
     e.preventDefault();

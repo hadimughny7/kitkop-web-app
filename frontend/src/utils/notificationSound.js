@@ -127,7 +127,7 @@ export const initAudioContext = () => {
     if (ctx.state === 'suspended') {
       ctx.resume();
     }
-  } catch (err) {
+  } catch {
     // ignore
   }
 };

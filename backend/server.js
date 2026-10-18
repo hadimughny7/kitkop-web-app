@@ -68,7 +68,8 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/stocks', stockRoutes);
 app.use('/api/recipes', recipeRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/reports', reportRoutes);
+// Keep the singular URL as a compatibility alias; both use the same role checks.
+app.use(['/api/reports', '/api/report'], reportRoutes);
 app.use('/api/settings', settingRoutes);
 
 // Health check
@@ -77,8 +78,6 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handler
-app.use('/api/report', require('./routes/reportRoutes'));
-
 app.use(errorHandler);
 
 // Start server
@@ -94,36 +93,7 @@ const startServer = async () => {
   await require('./migrations/validate-recipe-quantities')();
   await require('./migrations/validate-menu-prices')();
 
-  // Auto-migrate: create settings table & add service_charge column
-  try {
-    const { Setting } = require('./models');
-    const { sequelize } = require('./config/database');
-
-    // Sync Settings table (creates if not exists)
-    await Setting.sync();
-
-    // Seed default settings if empty
-    const count = await Setting.count();
-    if (count === 0) {
-      await Setting.bulkCreate([
-        { key: 'tax_percentage', value: '10', description: 'Persentase pajak (%)' },
-        { key: 'service_charge_percentage', value: '0', description: 'Persentase service charge (%)' },
-      ]);
-      console.log('  ✅ Default settings seeded');
-    }
-
-    // Add service_charge column to orders if not exists
-    try {
-      await sequelize.query(`ALTER TABLE orders ADD COLUMN service_charge DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER tax`);
-      console.log('  ✅ service_charge column added to orders');
-    } catch (e) {
-      // Column already exists, ignore
-    }
-
-    console.log('  ✅ Settings auto-migration complete');
-  } catch (e) {
-    console.error('  ⚠️ Auto-migration warning:', e.message);
-  }
+  await require('./migrations/add-settings-and-service-charge')();
 
   // === Background job: Auto-cancel expired pending orders (10 min timeout) ===
   const PAYMENT_TIMEOUT_MINUTES = 10;
@@ -175,4 +145,8 @@ const startServer = async () => {
   });
 };
 
-startServer();
+startServer().catch(async error => {
+  console.error('Server startup failed:', error.message);
+  await require('./config/database').sequelize.close();
+  process.exitCode = 1;
+});

@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { stockAPI, recipeAPI, menuAPI, orderAPI } from '../../services/api';
 import toast from 'react-hot-toast';
-import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineBookOpen, HiOutlineExclamationCircle, HiOutlineCheckCircle, HiOutlineCube, HiOutlineShoppingCart, HiOutlineUpload, HiOutlineMinusCircle } from 'react-icons/hi';
+import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineBookOpen, HiOutlineExclamationCircle, HiOutlineCheckCircle, HiOutlineCube, HiOutlineMinusCircle } from 'react-icons/hi';
 import { createStaffSocket } from '../../services/socket';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 
 const StockManagement = () => {
   const { hasRole } = useAuth();
@@ -11,17 +11,16 @@ const StockManagement = () => {
   const [stocks, setStocks] = useState([]);
   const [recipes, setRecipes] = useState([]);
   const [menus, setMenus] = useState([]);
-  const [logs, setLogs] = useState([]);
   const [recentOrder, setRecentOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchStock, setSearchStock] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
-  
+
   const [showStockModal, setShowStockModal] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [showReduceModal, setShowReduceModal] = useState(false);
   const [showRecipeModal, setShowRecipeModal] = useState(false);
-  
+
   const [editStock, setEditStock] = useState(null);
   const [editRecipe, setEditRecipe] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
@@ -31,44 +30,40 @@ const StockManagement = () => {
   const [reduceForm, setReduceForm] = useState({ quantity: 0, notes: '' });
   const [recipeForm, setRecipeForm] = useState({ menu_id: '', raw_material_id: '', quantity_used: 0 });
 
-  useEffect(() => { loadData(); }, []);
+  const loadStocks = useCallback(() => stockAPI.getAll().then(res => setStocks(res.data.data)).catch(() => toast.error('Gagal memuat stok')), []);
 
-  const loadData = async () => {
-    setLoading(true);
-    await Promise.all([loadStocks(), loadRecipes(), loadMenus(), loadLogs(), loadRecentOrder()]);
-    setLoading(false);
-  };
+  const loadRecipes = useCallback(() => recipeAPI.getAll().then(res => setRecipes(res.data.data)).catch(() => toast.error('Gagal memuat resep')), []);
+
+  const loadMenus = useCallback(() => menuAPI.getAll().then(res => setMenus(res.data.data)).catch(() => toast.error('Gagal memuat menu')), []);
+
+  const loadRecentOrder = useCallback(() => orderAPI.getAll({ status: 'completed' })
+    .then(res => setRecentOrder(res.data.data[0] || null)).catch(() => {}), []);
+
+  const loadData = useCallback(() => Promise.all([loadStocks(), loadRecipes(), loadMenus(), loadRecentOrder()])
+    .finally(() => setLoading(false)), [loadStocks, loadRecipes, loadMenus, loadRecentOrder]);
+
+  useEffect(() => { loadData(); }, [loadData]);
 
   useEffect(() => {
     const socket = createStaffSocket();
+    let timer;
     socket.on('stock-updated', () => {
       loadStocks();
-      loadLogs();
+
     });
     socket.on('new-order', () => {
       // Small delay to ensure DB transaction committed
-      setTimeout(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
         loadStocks();
-        loadLogs();
+
         loadRecentOrder();
       }, 500);
     });
-    return () => socket.disconnect();
-  }, []);
-
-  const loadStocks = async () => { try { const res = await stockAPI.getAll(); setStocks(res.data.data); } catch { toast.error('Gagal memuat stok'); } };
-  const loadRecipes = async () => { try { const res = await recipeAPI.getAll(); setRecipes(res.data.data); } catch { toast.error('Gagal memuat resep'); } };
-  const loadMenus = async () => { try { const res = await menuAPI.getAll(); setMenus(res.data.data); } catch { toast.error('Gagal memuat menu'); } };
-  const loadLogs = async () => { try { const res = await stockAPI.getLogs({ limit: 10 }); setLogs(res.data.data); } catch { toast.error('Gagal memuat log'); } };
-  const loadRecentOrder = async () => { 
-    try { 
-      const res = await orderAPI.getAll({ status: 'completed' }); 
-      if (res.data.data.length > 0) setRecentOrder(res.data.data[0]);
-    } catch { /* ignore */ } 
-  };
+    return () => { clearTimeout(timer); socket.disconnect(); };
+  }, [loadStocks, loadRecentOrder]);
 
   const formatDate = (date) => new Date(date).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  const formatTime = (date) => new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
   // Stock Handlers
   const handleStockSubmit = async (e) => {
@@ -76,7 +71,7 @@ const StockManagement = () => {
     try {
       if (editStock) { await stockAPI.update(editStock.id, stockForm); toast.success('Stok diperbarui'); }
       else { await stockAPI.create(stockForm); toast.success('Bahan baku ditambahkan'); }
-      setShowStockModal(false); loadStocks(); loadLogs();
+      setShowStockModal(false); loadStocks();
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal menyimpan'); }
   };
 
@@ -85,7 +80,7 @@ const StockManagement = () => {
     try {
       await stockAPI.restock(selectedStock.id, restockForm);
       toast.success('Restock berhasil dicatat');
-      setShowRestockModal(false); loadStocks(); loadLogs();
+      setShowRestockModal(false); loadStocks();
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal restock'); }
   };
 
@@ -94,7 +89,7 @@ const StockManagement = () => {
     try {
       await stockAPI.reduce(selectedStock.id, reduceForm);
       toast.success('Pengurangan stok berhasil dicatat');
-      setShowReduceModal(false); loadStocks(); loadLogs();
+      setShowReduceModal(false); loadStocks();
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal mengurangi stok'); }
   };
 
@@ -200,10 +195,10 @@ const StockManagement = () => {
 
       {/* Main Grid: Left (Tables) & Right (Sidebars) */}
       <div className="grid stock-content-grid">
-        
+
         {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          
+
           {/* Daftar Bahan Baku Table */}
           <div className="card">
             <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
@@ -241,10 +236,10 @@ const StockManagement = () => {
                       <td style={{ color: 'var(--neutral-500)' }}>{s.unit}</td>
                       <td style={{ color: 'var(--neutral-500)' }}>{s.min_stock}</td>
                       <td>
-                        {parseFloat(s.stock) <= 0 ? 
-                          <span className="badge badge-danger" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--danger-600)' }}>Habis</span> : 
-                         parseFloat(s.stock) <= parseFloat(s.min_stock) ? 
-                          <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--warning-600)' }}>Menipis</span> : 
+                        {parseFloat(s.stock) <= 0 ?
+                          <span className="badge badge-danger" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--danger-600)' }}>Habis</span> :
+                         parseFloat(s.stock) <= parseFloat(s.min_stock) ?
+                          <span className="badge badge-warning" style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--warning-600)' }}>Menipis</span> :
                           <span className="badge" style={{ background: 'var(--neutral-100)', color: 'var(--neutral-700)' }}>Aman</span>
                         }
                       </td>
@@ -252,7 +247,7 @@ const StockManagement = () => {
                         <button className="btn btn-ghost btn-sm" onClick={() => { setSelectedStock(s); setRestockForm({ quantity: 0, notes: '' }); setShowRestockModal(true); }}>Restock</button>
                         <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger-600)' }} onClick={() => { setSelectedStock(s); setReduceForm({ quantity: 0, notes: '' }); setShowReduceModal(true); }}>Kurangi</button>
                         {isManager && <button className="btn btn-ghost btn-sm" onClick={() => { setEditStock(s); setStockForm({ name: s.name, unit: s.unit, stock: s.stock, min_stock: s.min_stock }); setShowStockModal(true); }}><HiOutlinePencil /></button>}
-                        {isManager && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger-500)' }} onClick={() => { if(window.confirm('Hapus bahan baku ini?')) stockAPI.delete(s.id).then(() => { toast.success('Bahan baku dihapus'); loadStocks(); loadLogs(); }).catch(() => toast.error('Gagal menghapus')); }}><HiOutlineTrash /></button>}
+                        {isManager && <button className="btn btn-ghost btn-sm" style={{ color: 'var(--danger-500)' }} onClick={() => { if(window.confirm('Hapus bahan baku ini?')) stockAPI.delete(s.id).then(() => { toast.success('Bahan baku dihapus'); loadStocks();  }).catch(() => toast.error('Gagal menghapus')); }}><HiOutlineTrash /></button>}
                       </td>
                     </tr>
                   ))}
@@ -323,7 +318,7 @@ const StockManagement = () => {
 
         {/* RIGHT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
-          
+
           {/* Pengurangan Otomatis Terbaru */}
           <div className="card" style={{ background: '#fcfcfc' }}>
             <div className="card-header" style={{ paddingBottom: 'var(--space-2)' }}>
@@ -357,7 +352,7 @@ const StockManagement = () => {
 
               <div style={{ borderTop: '1px dashed var(--neutral-300)', paddingTop: 'var(--space-4)', marginBottom: 'var(--space-4)' }}>
                 <p style={{ fontSize: '12px', color: 'var(--neutral-500)', marginBottom: '8px' }}>Pengurangan Stok (Otomatis)</p>
-                
+
                 {recentOrder && recipes.length > 0 ? (
                   recentOrder.items?.map(item => {
                     const itemRecipes = recipes.filter(r => r.menu_id === item.menu_id);

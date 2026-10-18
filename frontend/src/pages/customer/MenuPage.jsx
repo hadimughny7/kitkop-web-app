@@ -3,7 +3,7 @@ import { activeGroups } from '../../utils/menuOptions';
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
-import { useCart } from '../../context/CartContext';
+import { useCart } from '../../context/useCart';
 import { HiOutlineSearch, HiOutlineArrowRight, HiPlus, HiMinus } from 'react-icons/hi';
 import toast from 'react-hot-toast';
 import './CustomerPages.css';
@@ -21,23 +21,22 @@ const MenuPage = () => {
   const { addItem, removeItem, updateQty, itemCount, items, subtotal } = useCart();
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [menuRes, catRes] = await Promise.all([
+          menuAPI.getAll({ available_only: 'true' }),
+          categoryAPI.getAll(),
+        ]);
+        setMenus(menuRes.data.data);
+        setCategories(catRes.data.data);
+      } catch {
+        toast.error('Gagal memuat menu.');
+      } finally {
+        setLoading(false);
+      }
+    };
     loadData();
   }, []);
-
-  const loadData = async () => {
-    try {
-      const [menuRes, catRes] = await Promise.all([
-        menuAPI.getAll({ available_only: 'true' }),
-        categoryAPI.getAll(),
-      ]);
-      setMenus(menuRes.data.data);
-      setCategories(catRes.data.data);
-    } catch (err) {
-      toast.error('Gagal memuat menu.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filteredMenus = menus.filter((menu) => {
     const matchCategory = activeCategory === 'all' || menu.category_id === parseInt(activeCategory);

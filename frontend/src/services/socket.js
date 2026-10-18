@@ -22,6 +22,12 @@ export const createStaffSocket = () => {
     if (error.data?.code === 'SESSION_REVOKED') sessionRevoked();
   });
   staffSockets.add(socket);
+  const disconnect = socket.disconnect.bind(socket);
+  socket.disconnect = () => {
+    // Socket.IO emits no disconnect event when it has not connected yet.
+    staffSockets.delete(socket);
+    return disconnect();
+  };
   socket.on('disconnect', () => { if (!socket.active) staffSockets.delete(socket); });
   return socket;
 };

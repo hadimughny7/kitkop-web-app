@@ -1,3 +1,5 @@
+> **Rancangan historis ? bukan panduan implementasi saat ini.** Dokumen ini dipertahankan sebagai catatan rancangan awal. Ketentuan telepon wajib, route QR lama, integrasi TokoPay/MD5, waktu pemotongan stok, dan izin Manajer di bawah sudah berbeda dari aplikasi. Gunakan [README utama](README.md) dan dokumen fitur di [docs/](docs/) untuk perilaku dan prosedur yang berlaku.
+
 # PROJECT CONTEXT — Sistem Informasi Pemesanan Menu Terintegrasi POS, Cafe Kitkop
 
 ## Latar Belakang

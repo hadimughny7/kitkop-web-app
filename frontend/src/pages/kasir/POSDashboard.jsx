@@ -24,32 +24,31 @@ const POSDashboard = () => {
   const [servicePercent, setServicePercent] = useState(0);
 
   useEffect(() => {
+    const loadPosData = async () => {
+      try {
+        const [menuRes, catRes, tableRes] = await Promise.all([
+          menuAPI.getAll({ available_only: 'true' }),
+          categoryAPI.getAll(),
+          tableAPI.getAll(),
+        ]);
+        setAllMenus(menuRes.data.data);
+        setAllCategories(catRes.data.data);
+        setAllTables(tableRes.data.data || []);
+        // Load settings
+        try {
+          const settingRes = await settingAPI.getAll();
+          const sd = settingRes.data.data;
+          if (sd.tax_percentage !== undefined) setTaxPercent(parseFloat(sd.tax_percentage));
+          if (sd.service_charge_percentage !== undefined) setServicePercent(parseFloat(sd.service_charge_percentage));
+        } catch { /* fallback to defaults */ }
+      } catch {
+        toast.error('Gagal memuat data menu.');
+      } finally {
+        setLoading(false);
+      }
+    };
     loadPosData();
   }, []);
-
-  const loadPosData = async () => {
-    try {
-      const [menuRes, catRes, tableRes] = await Promise.all([
-        menuAPI.getAll({ available_only: 'true' }),
-        categoryAPI.getAll(),
-        tableAPI.getAll(),
-      ]);
-      setAllMenus(menuRes.data.data);
-      setAllCategories(catRes.data.data);
-      setAllTables(tableRes.data.data || []);
-      // Load settings
-      try {
-        const settingRes = await settingAPI.getAll();
-        const sd = settingRes.data.data;
-        if (sd.tax_percentage !== undefined) setTaxPercent(parseFloat(sd.tax_percentage));
-        if (sd.service_charge_percentage !== undefined) setServicePercent(parseFloat(sd.service_charge_percentage));
-      } catch (e) { /* fallback to defaults */ }
-    } catch (err) {
-      toast.error('Gagal memuat data menu.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const posFilteredMenus = allMenus.filter((menu) => {
     const matchCategory = posActiveCategory === 'all' || menu.category_id === parseInt(posActiveCategory);
