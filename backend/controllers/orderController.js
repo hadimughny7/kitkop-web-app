@@ -9,6 +9,7 @@ const { issueTrackingToken } = require('../services/orderTracking');
 const { emitRealtime } = require('../socket/realtimeEvents');
 const { priceAmount } = require('../services/menuPrices');
 const { categoryItemType } = require('../services/categoryTypes');
+const { validateOrderInput } = require('../services/orderInput');
 
 const { allocateOrderNumber, isRetryableOrderError } = require('../services/orderNumbers');
 
@@ -19,18 +20,8 @@ const { allocateOrderNumber, isRetryableOrderError } = require('../services/orde
 const createOrder = async (req, res, next, attempt = 0) => {
   let t;
   try {
+    const { table_id, customer_name, customer_phone, customer_email, items, order_type } = validateOrderInput(req.body);
     t = await sequelize.transaction();
-    const { table_id, customer_name, customer_phone, customer_email, items, order_type } = req.body;
-
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      await t.rollback();
-      return res.status(400).json({ success: false, message: 'Pesanan harus memiliki minimal 1 item.' });
-    }
-
-    if (!customer_name) {
-      await t.rollback();
-      return res.status(400).json({ success: false, message: 'Nama pelanggan wajib diisi.' });
-    }
 
     let selectedTableId = null;
     if (table_id !== undefined && table_id !== null) {
@@ -45,14 +36,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       if (!table) fail('Meja tidak ditemukan.', 404);
       if (Number(table.is_active) !== 1) fail('Meja tidak aktif. Silakan pilih meja lain atau hubungi kasir.', 409);
     }
-
-    // Guest contact details are unverified: keep a separate identity per order.
-    // Matching a phone/email must never read or overwrite another order's customer.
-    const customer = await Customer.create({
-      name: customer_name,
-      phone: customer_phone || null,
-      email: customer_email || null,
-    }, { transaction: t });
 
     // Calculate totals
     let subtotalCents = 0;
@@ -74,7 +57,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
         return res.status(400).json({ success: false, message: `Menu "${menu.name}" sedang tidak tersedia.` });
       }
 
-      if (!Number.isInteger(item.qty) || item.qty < 1 || item.qty > 999) fail('Jumlah item harus bilangan bulat 1-999.');
       const basePrice = priceAmount(menu.price, 409);
       const { selections, extra } = resolveOptions(menu.optionGroups, item.option_ids);
       const unitPrice = priceAmount(basePrice + extra, 409, 'Harga item');
@@ -130,6 +112,14 @@ const createOrder = async (req, res, next, attempt = 0) => {
         assignedCashierId = activeCashier.id;
       }
     }
+
+    // Only write after structural and database-dependent item validation succeeds.
+    // Guest contacts remain independent, unverified identities for each order.
+    const customer = await Customer.create({
+      name: customer_name,
+      phone: customer_phone || null,
+      email: customer_email || null,
+    }, { transaction: t });
 
     // Create order
     const order_number = await allocateOrderNumber(t, { resync: attempt > 0 });

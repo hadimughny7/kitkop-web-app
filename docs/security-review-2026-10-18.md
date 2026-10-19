@@ -41,6 +41,10 @@ Perluas capability token pesanan ke HTTP pembayaran, dengan kecocokan ID order s
 
 ### B03 — Rendah: elemen item pesanan yang salah bentuk menghasilkan HTTP 500
 
+**Status: sudah diperbaiki pada tindak lanjut B03.** Bukti di bawah merekam kondisi sebelum perbaikan. Seluruh body/item diperiksa sebelum transaksi; input null/array/primitive dan field malformed mendapat 400 tanpa percobaan penulisan SQL. Pemeriksaan menu/pilihan/harga dari database juga selesai sebelum pembuatan customer. Rincian kontrak dan kompatibilitas: [validasi input pesanan](order-input-validation.md).
+
+Regresi setelah perbaikan: **216 tes backend dan 13 tes frontend lulus**, tanpa backend gagal/skipped; lint frontend 0 error/warning. Browser 375/1440 px memakai API asli dan schema localhost sementara untuk checkout pelanggan dengan kontak opsional/add-on, capability QRIS dengan gateway mock, serta POS buat-pesanan/bayar-tunai dan pemotongan stok. Tidak ada pembayaran nyata, perubahan frontend, migrasi, atau perubahan data operasional. Fixture pengujian dihapus.
+
 `POST /api/orders` dengan nama fixture valid dan `items: [null]` menghasilkan 500. Controller memeriksa array tidak kosong, lalu membaca `item.menu_id` tanpa memeriksa apakah elemen merupakan object yang valid.
 
 Lokasi: [orderController.js](../backend/controllers/orderController.js) sekitar baris 60–62. Dalam uji, jumlah order/customer tidak berubah: transaksi tetap di-rollback. Ini masalah validasi dan kualitas respons API, bukan bukti kerusakan stok. Tolak elemen null/array/primitive dengan 400 sebelum menulis customer atau memulai pemrosesan item.
@@ -55,7 +59,7 @@ Saat `DB_SSL=true`, [config/database.js](../backend/config/database.js) baris 22
 
 Risiko relevan untuk koneksi database melalui jaringan yang memerlukan verifikasi identitas server. Tidak dilakukan serangan jaringan, koneksi hosting, atau pengujian sertifikat provider. Tinjau CA/konfigurasi provider dan aktifkan verifikasi yang sesuai sebelum mengubah deployment; mengganti flag tanpa menyiapkan trust chain dapat memutus koneksi. Rujukan: [panduan TLS OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html).
 
-Temuan B03 masih terbuka. B04 sudah diperbaiki pada konfigurasi aplikasi, tetapi validasi koneksi provider tetap diperlukan ketika hosting aktif. B01 dan B02 telah diperbaiki; tidak ada migrasi database baru untuk perbaikan tersebut maupun B04.
+Temuan B01, B02, dan B03 telah diperbaiki. B04 sudah diperbaiki pada konfigurasi aplikasi, tetapi validasi koneksi provider tetap diperlukan ketika hosting aktif. Perbaikan B01–B04 tidak memerlukan migrasi database baru.
 
 ## Keputusan lama dan batas cakupan
 
@@ -65,4 +69,4 @@ Temuan B03 masih terbuka. B04 sudah diperbaiki pada konfigurasi aplikasi, tetapi
 - SQL bootstrap lama belum selaras seluruhnya dengan model. Kali ini berkas tetap dipertahankan sebagai referensi historis dan setup baru diarahkan ke model terkini; ini bukan migrasi otomatis untuk semua kemungkinan instalasi lama.
 - Tidak menguji settlement KuyzPay nyata, printer, semua kombinasi perangkat/UI, WAF/reverse proxy, TLS hosting, izin database hosting, pemindaian seluruh history Git, DoS atau brute-force massal. Lulusnya suite regresi tidak meniadakan temuan baru di luar cakupannya.
 
-Prioritas berikutnya: keputusan production F04, verifikasi TLS sesuai provider (B04), lalu validasi item malformed (B03).
+Prioritas berikutnya: keputusan production F04 dan verifikasi TLS sesuai provider ketika hosting aktif (B04).

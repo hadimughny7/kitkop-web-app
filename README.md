@@ -64,6 +64,7 @@ Commit/push GitHub dapat memicu deployment otomatis bila hosting/CI dikonfiguras
 Panduan perilaku dan perubahan fitur:
 
 - [Pilihan menu](docs/menu-options.md), [harga](docs/menu-prices.md), [kategori](docs/category-types.md), dan [gambar menu](docs/menu-image-uploads.md).
+- [Validasi input pesanan](docs/order-input-validation.md), termasuk respons 400 untuk elemen item yang salah bentuk.
 - [Konsistensi stok](docs/stock-consistency.md), [produksi](docs/kitchen-production.md), dan [pembatalan](docs/order-cancellation.md).
 - [Webhook pembayaran](docs/payment-webhook.md), [percobaan QRIS](docs/qris-retries.md), dan [akses tracking/realtime](docs/realtime-access.md).
 - [Sesi staf](docs/staff-sessions.md), [pembatasan login](docs/login-rate-limiting.md), dan [izin Owner/Manajer](docs/user-management-permissions.md).
