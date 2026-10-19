@@ -47,11 +47,15 @@ Lokasi: [orderController.js](../backend/controllers/orderController.js) sekitar 
 
 ### B04 — Sedang, bersyarat dan inspeksi kode: TLS database tidak memverifikasi sertifikat
 
+**Status: konfigurasi aplikasi sudah diperbaiki; verifikasi deployment provider masih menunggu layanan aktif.** Bukti di bawah merekam konfigurasi lama. `DB_SSL=true` kini memverifikasi CA serta hostname DNS dan mendukung CA khusus melalui environment/file, tanpa fallback tidak aman. Pengguna menyatakan Railway lama sudah tidak aktif, sehingga tidak ada pengujian koneksi/sertifikat hosting. Detail: [konfigurasi TLS database](database-operations.md#tls-database-dan-ca-b04).
+
+Tindak lanjut diverifikasi pada 19 Oktober 2026: **204 tes backend lulus, tanpa gagal/skipped**, termasuk handshake TLS mysql2 nyata melalui loopback untuk sertifikat dipercaya, CA salah/tanpa CA, hostname salah, dan sertifikat kedaluwarsa. CA yang hilang/rusak serta konfigurasi ambigu ditolak. Regresi MySQL lokal tetap lulus; `.env` aktif, data operasional, dan hosting tidak diubah. Tidak ada migrasi database.
+
 Saat `DB_SSL=true`, [config/database.js](../backend/config/database.js) baris 22–24 mengatur `rejectUnauthorized: false`. Koneksi yang terenkripsi dengan konfigurasi ini belum memverifikasi sertifikat server sebagaimana verifikasi TLS biasa.
 
 Risiko relevan untuk koneksi database melalui jaringan yang memerlukan verifikasi identitas server. Tidak dilakukan serangan jaringan, koneksi hosting, atau pengujian sertifikat provider. Tinjau CA/konfigurasi provider dan aktifkan verifikasi yang sesuai sebelum mengubah deployment; mengganti flag tanpa menyiapkan trust chain dapat memutus koneksi. Rujukan: [panduan TLS OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html).
 
-Temuan B03 dan B04 masih terbuka. B01 dan B02 diperbaiki setelah pengguna menyetujui tindak lanjut; tidak memerlukan migrasi database.
+Temuan B03 masih terbuka. B04 sudah diperbaiki pada konfigurasi aplikasi, tetapi validasi koneksi provider tetap diperlukan ketika hosting aktif. B01 dan B02 telah diperbaiki; tidak ada migrasi database baru untuk perbaikan tersebut maupun B04.
 
 ## Keputusan lama dan batas cakupan
 

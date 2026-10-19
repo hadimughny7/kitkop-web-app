@@ -44,6 +44,36 @@ Kesalahan migrasi tidak lagi diabaikan pada startup; backend belum menerima traf
 
 API laporan memakai `/api/reports`. Alias `/api/report` tetap didukung melalui router dan middleware autentikasi/otorisasi yang sama, untuk kompatibilitas konsumen lama. Konsumen baru sebaiknya memakai URL plural.
 
+## TLS database dan CA (B04)
+
+Saat `DB_SSL=true`, aplikasi selalu mengaktifkan `rejectUnauthorized: true` **dan** `verifyIdentity: true` untuk mysql2, dengan minimum TLS 1.2. Mengaktifkan verifikasi CA saja belum cukup untuk driver ini karena pemeriksaan nama server merupakan opsi terpisah. `DB_HOST` wajib hostname DNS yang sesuai sertifikat; alamat IP ditolak pada mode TLS untuk menghindari perilaku pemeriksaan identitas/SNI yang berbeda pada driver. MySQL lokal tanpa TLS tetap didukung saat `DB_SSL` kosong atau `false`.
+
+Pilih konfigurasi sesuai sertifikat server yang benar-benar tersedia:
+
+```dotenv
+# Sertifikat dari CA publik yang dipercaya Node:
+DB_HOST=db.example.com
+DB_SSL=true
+DB_SSL_CA=
+DB_SSL_CA_FILE=
+```
+
+```dotenv
+# CA khusus yang disediakan administrator/provider:
+DB_HOST=db.example.com
+DB_SSL=true
+DB_SSL_CA_FILE=certs/provider-ca.pem
+DB_SSL_CA=
+```
+
+Path relatif CA dihitung dari folder `backend`, bukan direktori saat menjalankan command. File dapat pula memakai path absolut untuk secret/config mount deployment. Alternatifnya isi `DB_SSL_CA` dengan PEM, memakai newline asli atau `\n` yang di-escape, dan kosongkan `DB_SSL_CA_FILE`. Bundle beberapa sertifikat PEM didukung. Ketika CA khusus diberikan, trust mengikuti bundle tersebut; jangan menganggap seluruh CA publik otomatis ikut ditambahkan. Dukungan custom CA mengikuti [dokumentasi mysql2](https://sidorares.github.io/node-mysql2/docs/examples/connections/create-connection#ssl-custom-certificate) dan [konfigurasi TLS Node](https://nodejs.org/api/tls.html#tlscreatesecurecontextoptions).
+
+Gunakan hanya satu sumber CA. File hilang/kosong/rusak, isi selain sertifikat, dua sumber CA sekaligus, salah eja nilai `DB_SSL`, atau CA yang dikonfigurasi tanpa mengaktifkan TLS akan menghentikan startup. Tidak ada fallback ke koneksi yang menonaktifkan verifikasi. Sertifikat kedaluwarsa, CA tidak dipercaya dan hostname tidak cocok ditolak saat handshake. Folder `backend/certs/` diabaikan Git; simpan material provider di konfigurasi lokal/mount yang sesuai, bukan source atau frontend.
+
+Pengguna menyatakan layanan Railway lama sudah tidak aktif. Konfigurasi lokal yang diperiksa hanya memakai MySQL localhost tanpa flag TLS. Karena itu, CA, sertifikat, SAN/hostname dan dukungan TLS pada deployment Railway tersebut **belum dapat diverifikasi**. Panduan resmi Railway menyediakan [koneksi MySQL](https://docs.railway.com/databases/mysql) dan [TCP proxy](https://docs.railway.com/networking/tcp-proxy), tetapi alamat proxy/koneksi yang tersedia tidak boleh diasumsikan otomatis cocok dengan identitas sertifikat MySQL. Saat hosting baru diaktifkan, periksa konfigurasi server/sertifikat/CA dan hostname yang benar sebelum restart backend dengan `DB_SSL=true`. Jika server belum mendukung TLS terverifikasi, konfigurasi server/provider perlu diselesaikan; jangan mengatasinya dengan `rejectUnauthorized: false`.
+
+Tes `databaseTls.test.js` memeriksa parsing konfigurasi, CA inline/file/bundle dan penerusan opsi Sequelize. `databaseTls.integration.test.js` membuat CA dan sertifikat sementara menggunakan **OpenSSL**, lalu menjalankan handshake TLS mysql2 melalui loopback: sertifikat valid/nama cocok diterima; CA salah/tidak dikonfigurasi, nama salah dan sertifikat kedaluwarsa ditolak. Tes ini tidak melakukan autentikasi SQL atau koneksi provider. OpenSSL diperlukan pada PATH, melalui `OPENSSL_BIN`, atau instalasi Git for Windows standar. Private key fixture dibuat di TEMP dan dihapus; tidak disimpan di Git.
+
 ## Kredensial yang pernah terekspos
 
 Password database yang dulu tercantum di route debug harus dianggap terekspos, termasuk di riwayat commit. Menghapus kode dan melakukan push tidak mencabut password tersebut.

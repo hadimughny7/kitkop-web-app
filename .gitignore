@@ -45,6 +45,9 @@ Thumbs.db
 # Local development tunnel; install/manage separately from application source.
 /backend/ngrok.exe
 
+# Provider TLS material is configured locally or mounted by the deployment.
+/backend/certs/
+
 # Misc
 *.local
 .agents/

@@ -46,6 +46,8 @@ npm run build
 
 Tes backend biasa: `cd backend` lalu `npm test`. Tes integrasi MySQL hanya aktif dengan flag berikut. Gunakan **MySQL localhost** dan akun yang boleh membuat/menghapus schema sementara; tes tidak memakai data operasional:
 
+Tes handshake TLS backend memerlukan OpenSSL pada PATH, melalui `OPENSSL_BIN`, atau bawaan Git for Windows standar. Sertifikat/private key uji dibuat sementara dan dihapus; panduan konfigurasi ada di [TLS database](docs/database-operations.md#tls-database-dan-ca-b04).
+
 ```powershell
 cd backend
 $env:KITKOP_OPTIONS_DB_TEST='true'
