@@ -2,7 +2,7 @@
 
 Tanggal: 18 Oktober 2026, Asia/Jakarta. Acuan source: `d2a30b2`. Cakupan: pelacakan Git, duplikasi berkas, referensi import/require, aset, dependency, konfigurasi, dan dokumentasi lokal. Laporan ini tidak melakukan audit keamanan menyeluruh baru.
 
-Dokumen ini mencatat beberapa putaran pekerjaan. Status terbaru ada di bagian **Penyelesaian cleanup, dokumentasi, dan struktur**; daftar kandidat awal di bawah dipertahankan sebagai bukti pemeriksaan.
+Dokumen ini mencatat beberapa putaran pekerjaan. Status terbaru ada di bagian **Pembersihan lanjutan 21 Oktober 2026**; daftar kandidat awal di bawah dipertahankan sebagai bukti pemeriksaan.
 
 ## Pembersihan yang diterapkan
 
@@ -135,3 +135,13 @@ Validasi akhir putaran ini: **177 tes backend, 13 tes frontend, lint 0 error/war
 Browser hasil build pada 375/1440 px mengulang 11 route staf, chart laporan, keranjang tamu, polling/countdown QRIS dan pergantian order dengan API fixture. Bundle utama tetap 381,34 KB / 122,33 KB gzip; tidak ada peningkatan batas warning. Semua schema fixture dihapus dan server preview milik pengujian dihentikan. Data operasional dan `.env` aktif tetap tidak diubah.
 
 Pemeriksaan keamanan terarah menemukan pekerjaan baru pada resep publik, scope token pembayaran, validasi elemen item, dan konfigurasi TLS database. Bukti, tingkat risiko dan batas pengujian ada pada [laporan keamanan lanjutan](security-review-2026-10-18.md). Saat putaran cleanup selesai, perubahan masih belum di-commit pada HEAD `d2a30b2`. Maintenance/cleanup kemudian disimpan pada commit `4117a60`; tindak lanjut B02, B01, dan B03 memakai commit terpisah. Konfigurasi aplikasi untuk B04 diperbaiki pada tindak lanjut 19 Oktober; pengujian provider masih menunggu layanan hosting aktif.
+
+## Pembersihan lanjutan 21 Oktober 2026
+
+Sesuai persetujuan pengguna, proyek lokal `video-motion/` dan `PANDUAN-VIDEO-MOTION.md` dihapus. Keduanya tidak dilacak Git dan tidak dirujuk aplikasi.
+
+Rancangan historis `kitkop.md`, query troubleshooting `database/query.sql`, dan koreksi kategori lama `database/fix.sql` dihapus. README utama dan README SQL diperbarui agar tidak mengarahkan pembaca ke berkas tersebut.
+
+Tool lokal `backend/ngrok.exe` juga dihapus. Backup duplikat `backend/local_backup.sql` dihapus setelah SHA-256 diverifikasi sama dengan `database/local_backup.sql`; salinan di folder database tetap dipertahankan. Tool dan backup tersebut sudah diabaikan Git.
+
+Source runtime, dependency, upload, environment, schema, seed, dan migrasi aplikasi tidak diubah dalam pembersihan ini. Perubahan script Vite pada `frontend/package.json` yang sudah ada sebelum pekerjaan ini tidak disertakan dalam commit cleanup.

@@ -68,6 +68,6 @@ Panduan perilaku dan perubahan fitur:
 - [Konsistensi stok](docs/stock-consistency.md), [produksi](docs/kitchen-production.md), dan [pembatalan](docs/order-cancellation.md).
 - [Webhook pembayaran](docs/payment-webhook.md), [percobaan QRIS](docs/qris-retries.md), dan [akses tracking/realtime](docs/realtime-access.md).
 - [Sesi staf](docs/staff-sessions.md), [pembatasan login](docs/login-rate-limiting.md), dan [izin Owner/Manajer](docs/user-management-permissions.md).
-- [Catatan maintenance](docs/repository-cleanup-2026-10-18.md). [kitkop.md](kitkop.md) adalah rancangan historis.
+- [Catatan maintenance](docs/repository-cleanup-2026-10-18.md).
 
 Endpoint simulasi pembayaran masih terbuka sesuai keputusan pengembangan sebelumnya. Jangan menganggap checkout ini siap dibuka untuk production hanya karena tes lulus atau audit dependency bersih. Rotasi kredensial hosting lama juga masih merupakan pekerjaan administratif yang belum dilakukan.
