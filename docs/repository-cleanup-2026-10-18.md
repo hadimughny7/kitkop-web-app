@@ -2,7 +2,7 @@
 
 Tanggal: 18 Oktober 2026, Asia/Jakarta. Acuan source: `d2a30b2`. Cakupan: pelacakan Git, duplikasi berkas, referensi import/require, aset, dependency, konfigurasi, dan dokumentasi lokal. Laporan ini tidak melakukan audit keamanan menyeluruh baru.
 
-Dokumen ini mencatat beberapa putaran pekerjaan. Status terbaru ada di bagian **Pembersihan lanjutan 21 Oktober 2026**; daftar kandidat awal di bawah dipertahankan sebagai bukti pemeriksaan.
+Dokumen ini mencatat beberapa putaran pekerjaan. Status terbaru ada di bagian **Audit ulang 23 Oktober 2026**; daftar kandidat awal di bawah dipertahankan sebagai bukti pemeriksaan.
 
 ## Pembersihan yang diterapkan
 
@@ -145,3 +145,15 @@ Rancangan historis `kitkop.md`, query troubleshooting `database/query.sql`, dan 
 Tool lokal `backend/ngrok.exe` juga dihapus. Backup duplikat `backend/local_backup.sql` dihapus setelah SHA-256 diverifikasi sama dengan `database/local_backup.sql`; salinan di folder database tetap dipertahankan. Tool dan backup tersebut sudah diabaikan Git.
 
 Source runtime, dependency, upload, environment, schema, seed, dan migrasi aplikasi tidak diubah dalam pembersihan ini. Perubahan script Vite pada `frontend/package.json` yang sudah ada sebelum pekerjaan ini tidak disertakan dalam commit cleanup.
+
+## Audit ulang 23 Oktober 2026
+
+Pengguna sudah menyalin hasil video dan meminta penghapusan proyek video yang dibuat kembali setelah cleanup sebelumnya. Folder lokal `video-motion/`, termasuk source, screenshot, dependency, dan hasil render, dihapus: 10.687 file dengan total 696.438.974 byte. Folder tersebut tidak dilacak Git.
+
+Audit statis menggunakan parser JavaScript/JSX terhadap import, export, dynamic import, dan require; entry aplikasi, tes, serta CLI pada package scripts ikut diperhitungkan. Semua modul frontend terhubung. Kandidat backend tunggal adalah `migrations/update-order-item-status.js`, tetapi file ini memiliki fungsi migrasi manual instalasi lama sehingga dipertahankan. Semua dependency runtime memiliki referensi statis dalam aplikasi atau tes; temuan ini tidak membuktikan setiap ekspor/fungsi selalu dipakai.
+
+Tidak ditemukan duplikasi isi persis pada file tracked yang diperiksa (lockfile dikecualikan), artefak build/dependency/log/backup yang ikut tracked, file sementara atau arsip video tersisa di source, maupun tautan relatif Markdown yang rusak. Aset publik frontend hanya logo PNG aktif. `dokumentasiAPI.md` masih menjadi referensi kontrak webhook.
+
+`PANDUAN-VIDEO-MOTION.md` tetap ada karena permintaan penghapusan menyebut folder video; panduan ini bukan kebutuhan aplikasi dan dapat dipindahkan ke koleksi panduan pribadi. `frontend/dist` sekitar 1,04 MB dapat dibuat ulang, tetapi masih dapat dipakai untuk preview/deployment lokal. `database/local_backup.sql` adalah satu salinan backup lokal yang tersisa, sehingga tidak dihapus. Build, backup, dan dependency lokal tersebut sudah diabaikan Git. Schema, seed, migrasi, tes, upload, environment, dan dokumentasi operasional tetap dipertahankan berdasarkan fungsinya.
+
+Verifikasi: ESLint langsung melalui `node ./node_modules/eslint/bin/eslint.js . --max-warnings=0` lulus; 13 tes frontend lulus. `npm.cmd run lint` gagal pada launcher Windows di path proyek yang mengandung `&`, sebelum ESLint berjalan; pemeriksaan diulang melalui entry Node langsung. Ini masalah perintah lokal, bukan kandidat penghapusan dependency. Perubahan `frontend/package.json` yang sudah ada sebelumnya dipertahankan. Tidak ada commit atau push pada audit ini.
