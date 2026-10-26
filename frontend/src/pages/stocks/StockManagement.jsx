@@ -4,6 +4,8 @@ import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch, HiOutlineBookOpen, HiOutlineExclamationCircle, HiOutlineCheckCircle, HiOutlineCube, HiOutlineMinusCircle } from 'react-icons/hi';
 import { createStaffSocket } from '../../services/socket';
 import { useAuth } from '../../context/useAuth';
+import Modal from '../../components/Modal';
+import LoadingState from '../../components/LoadingState';
 
 const StockManagement = () => {
   const { hasRole } = useAuth();
@@ -132,7 +134,7 @@ const StockManagement = () => {
     return acc;
   }, {});
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (loading) return <LoadingState>Memuat stok dan resep...</LoadingState>;
 
   return (
     <div className="stock-management">
@@ -385,74 +387,66 @@ const StockManagement = () => {
       {/* Modals reuse existing state */}
       {/* Stock Modal */}
       {showStockModal && (
-        <div className="modal-overlay" onClick={() => setShowStockModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>{editStock ? 'Edit Bahan Baku' : 'Tambah Bahan Baku'}</h2><button className="btn btn-ghost btn-sm" onClick={() => setShowStockModal(false)}>✕</button></div>
+        <Modal label={editStock ? 'Edit Bahan Baku' : 'Tambah Bahan Baku'} onClose={() => setShowStockModal(false)}>
+            <div className="modal-header"><h2>{editStock ? 'Edit Bahan Baku' : 'Tambah Bahan Baku'}</h2><button className="btn btn-ghost btn-sm" aria-label="Tutup formulir bahan baku" onClick={() => setShowStockModal(false)}>✕</button></div>
             <form onSubmit={handleStockSubmit}>
               <div className="modal-body">
-                <div className="form-group"><label className="form-label">Nama Bahan</label><input className="form-input" value={stockForm.name} onChange={(e) => setStockForm({ ...stockForm, name: e.target.value })} required /></div>
-                <div className="form-group"><label className="form-label">Satuan</label><select className="form-select" value={stockForm.unit} onChange={(e) => setStockForm({ ...stockForm, unit: e.target.value })} required><option value="">-- Pilih Satuan --</option><option value="gram">gram</option><option value="kg">kg</option><option value="ml">ml</option><option value="liter">liter</option><option value="pcs">pcs</option><option value="sachet">sachet</option><option value="buah">buah</option></select></div>
+                <div className="form-group"><label className="form-label" htmlFor="stock-name">Nama Bahan</label><input id="stock-name" className="form-input" value={stockForm.name} onChange={(e) => setStockForm({ ...stockForm, name: e.target.value })} required /></div>
+                <div className="form-group"><label className="form-label" htmlFor="stock-unit">Satuan</label><select id="stock-unit" className="form-select" value={stockForm.unit} onChange={(e) => setStockForm({ ...stockForm, unit: e.target.value })} required><option value="">-- Pilih Satuan --</option><option value="gram">gram</option><option value="kg">kg</option><option value="ml">ml</option><option value="liter">liter</option><option value="pcs">pcs</option><option value="sachet">sachet</option><option value="buah">buah</option></select></div>
                 <div className="grid grid-2">
-                  <div className="form-group"><label className="form-label">{editStock ? 'Stok Saat Ini' : 'Stok Awal'}</label><input type="number" className="form-input" value={stockForm.stock} onChange={(e) => setStockForm({ ...stockForm, stock: parseFloat(e.target.value) })} required /></div>
-                  <div className="form-group"><label className="form-label">Batas Minimum Kritis</label><input type="number" className="form-input" value={stockForm.min_stock} onChange={(e) => setStockForm({ ...stockForm, min_stock: parseFloat(e.target.value) })} required /></div>
+                  <div className="form-group"><label className="form-label" htmlFor="stock-quantity">{editStock ? 'Stok Saat Ini' : 'Stok Awal'}</label><input id="stock-quantity" type="number" className="form-input" value={stockForm.stock} onChange={(e) => setStockForm({ ...stockForm, stock: parseFloat(e.target.value) })} required /></div>
+                  <div className="form-group"><label className="form-label" htmlFor="stock-minimum">Batas Minimum Kritis</label><input id="stock-minimum" type="number" className="form-input" value={stockForm.min_stock} onChange={(e) => setStockForm({ ...stockForm, min_stock: parseFloat(e.target.value) })} required /></div>
                 </div>
               </div>
               <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowStockModal(false)}>Batal</button><button type="submit" className="btn btn-primary">Simpan</button></div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Restock Modal */}
       {showRestockModal && selectedStock && (
-        <div className="modal-overlay" onClick={() => setShowRestockModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>Restock: {selectedStock.name}</h2><button className="btn btn-ghost btn-sm" onClick={() => setShowRestockModal(false)}>✕</button></div>
+        <Modal label={`Restock: ${selectedStock.name}`} onClose={() => setShowRestockModal(false)}>
+            <div className="modal-header"><h2>Restock: {selectedStock.name}</h2><button className="btn btn-ghost btn-sm" aria-label="Tutup restock" onClick={() => setShowRestockModal(false)}>✕</button></div>
             <form onSubmit={handleRestockSubmit}>
               <div className="modal-body">
                 <p style={{ marginBottom: 'var(--space-2)' }}>Stok saat ini: <strong>{selectedStock.stock} {selectedStock.unit}</strong></p>
-                <div className="form-group"><label className="form-label">Jumlah Tambahan ({selectedStock.unit})</label><input type="number" min="0.1" step="0.1" className="form-input" value={restockForm.quantity} onChange={(e) => setRestockForm({ ...restockForm, quantity: parseFloat(e.target.value) })} required /></div>
-                <div className="form-group"><label className="form-label">Catatan / Supplier</label><input className="form-input" value={restockForm.notes} onChange={(e) => setRestockForm({ ...restockForm, notes: e.target.value })} required /></div>
+                <div className="form-group"><label className="form-label" htmlFor="restock-quantity">Jumlah Tambahan ({selectedStock.unit})</label><input id="restock-quantity" type="number" min="0.1" step="0.1" className="form-input" value={restockForm.quantity} onChange={(e) => setRestockForm({ ...restockForm, quantity: parseFloat(e.target.value) })} required /></div>
+                <div className="form-group"><label className="form-label" htmlFor="restock-notes">Catatan / Supplier</label><input id="restock-notes" className="form-input" value={restockForm.notes} onChange={(e) => setRestockForm({ ...restockForm, notes: e.target.value })} required /></div>
               </div>
               <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowRestockModal(false)}>Batal</button><button type="submit" className="btn btn-success">Simpan Restock</button></div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Reduce Modal */}
       {showReduceModal && selectedStock && (
-        <div className="modal-overlay" onClick={() => setShowReduceModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>Kurangi Stok: {selectedStock.name}</h2><button className="btn btn-ghost btn-sm" onClick={() => setShowReduceModal(false)}>✕</button></div>
+        <Modal label={`Kurangi Stok: ${selectedStock.name}`} onClose={() => setShowReduceModal(false)}>
+            <div className="modal-header"><h2>Kurangi Stok: {selectedStock.name}</h2><button className="btn btn-ghost btn-sm" aria-label="Tutup pengurangan stok" onClick={() => setShowReduceModal(false)}>✕</button></div>
             <form onSubmit={handleReduceSubmit}>
               <div className="modal-body">
                 <p style={{ marginBottom: 'var(--space-2)' }}>Stok saat ini: <strong>{selectedStock.stock} {selectedStock.unit}</strong></p>
                 <p style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', marginBottom: 'var(--space-4)' }}>Gunakan fitur ini untuk mengurangi stok bahan baku yang kadaluarsa, rusak, atau tidak layak pakai.</p>
-                <div className="form-group"><label className="form-label">Jumlah Pengurangan ({selectedStock.unit})</label><input type="number" min="0.1" step="0.1" className="form-input" value={reduceForm.quantity} onChange={(e) => setReduceForm({ ...reduceForm, quantity: parseFloat(e.target.value) })} required /></div>
-                <div className="form-group"><label className="form-label">Alasan Pengurangan</label><input className="form-input" placeholder="Contoh: Kadaluarsa, rusak, tidak layak pakai" value={reduceForm.notes} onChange={(e) => setReduceForm({ ...reduceForm, notes: e.target.value })} required /></div>
+                <div className="form-group"><label className="form-label" htmlFor="reduce-quantity">Jumlah Pengurangan ({selectedStock.unit})</label><input id="reduce-quantity" type="number" min="0.1" step="0.1" className="form-input" value={reduceForm.quantity} onChange={(e) => setReduceForm({ ...reduceForm, quantity: parseFloat(e.target.value) })} required /></div>
+                <div className="form-group"><label className="form-label" htmlFor="reduce-notes">Alasan Pengurangan</label><input id="reduce-notes" className="form-input" placeholder="Contoh: Kadaluarsa, rusak, tidak layak pakai" value={reduceForm.notes} onChange={(e) => setReduceForm({ ...reduceForm, notes: e.target.value })} required /></div>
               </div>
               <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowReduceModal(false)}>Batal</button><button type="submit" className="btn btn-danger">Kurangi Stok</button></div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Recipe Modal */}
       {showRecipeModal && (
-        <div className="modal-overlay" onClick={() => setShowRecipeModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header"><h2>{editRecipe ? 'Edit Takaran Resep' : 'Tambah Komposisi Resep'}</h2><button className="btn btn-ghost btn-sm" onClick={() => setShowRecipeModal(false)}>✕</button></div>
+        <Modal label={editRecipe ? 'Edit Takaran Resep' : 'Tambah Komposisi Resep'} onClose={() => setShowRecipeModal(false)}>
+            <div className="modal-header"><h2>{editRecipe ? 'Edit Takaran Resep' : 'Tambah Komposisi Resep'}</h2><button className="btn btn-ghost btn-sm" aria-label="Tutup formulir resep" onClick={() => setShowRecipeModal(false)}>✕</button></div>
             <form onSubmit={handleRecipeSubmit}>
               <div className="modal-body">
-                <div className="form-group"><label className="form-label">Pilih Menu</label><select className="form-select" value={recipeForm.menu_id} onChange={(e) => setRecipeForm({ ...recipeForm, menu_id: e.target.value })} required disabled={!!editRecipe}>{menus.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
-                <div className="form-group"><label className="form-label">Bahan Baku</label><select className="form-select" value={recipeForm.raw_material_id} onChange={(e) => setRecipeForm({ ...recipeForm, raw_material_id: e.target.value })} required disabled={!!editRecipe}>{stocks.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}</select></div>
-                <div className="form-group"><label className="form-label">Kebutuhan Per 1 Porsi</label><input type="number" step="0.01" min="0" className="form-input" value={recipeForm.quantity_used} onChange={(e) => setRecipeForm({ ...recipeForm, quantity_used: parseFloat(e.target.value) })} required /></div>
+                <div className="form-group"><label className="form-label" htmlFor="recipe-menu">Pilih Menu</label><select id="recipe-menu" className="form-select" value={recipeForm.menu_id} onChange={(e) => setRecipeForm({ ...recipeForm, menu_id: e.target.value })} required disabled={!!editRecipe}>{menus.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select></div>
+                <div className="form-group"><label className="form-label" htmlFor="recipe-material">Bahan Baku</label><select id="recipe-material" className="form-select" value={recipeForm.raw_material_id} onChange={(e) => setRecipeForm({ ...recipeForm, raw_material_id: e.target.value })} required disabled={!!editRecipe}>{stocks.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}</select></div>
+                <div className="form-group"><label className="form-label" htmlFor="recipe-quantity">Kebutuhan Per 1 Porsi</label><input id="recipe-quantity" type="number" step="0.01" min="0" className="form-input" value={recipeForm.quantity_used} onChange={(e) => setRecipeForm({ ...recipeForm, quantity_used: parseFloat(e.target.value) })} required /></div>
               </div>
               <div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowRecipeModal(false)}>Batal</button><button type="submit" className="btn btn-primary">Simpan</button></div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

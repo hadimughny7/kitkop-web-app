@@ -449,6 +449,20 @@ input, select, textarea {
   animation: slideUp 0.3s var(--transition-spring);
 }
 
+.accessible-modal {
+  margin: auto;
+  padding: 0;
+  border: 0;
+  width: calc(100% - 2rem);
+  max-height: 90dvh;
+  color: var(--neutral-800);
+  scroll-padding-block: 1rem;
+}
+
+.accessible-modal::backdrop {
+  background: var(--surface-overlay);
+}
+
 .modal-header {
   padding: var(--space-6);
   border-bottom: 1px solid var(--neutral-100);
@@ -804,7 +818,7 @@ html :is(button, a, input, select, textarea, [tabindex]):focus-visible {
 .btn-icon { border-radius: var(--radius-md); }
 .btn-primary { background: var(--primary-500); }
 .btn-primary:hover { background: #333; }
-.form-input, .form-select, .search-bar input { border-color: var(--neutral-300); }
+.form-input, .form-select, .search-bar input { border-color: var(--neutral-400); }
 .form-input:focus, .form-select:focus, .search-bar input:focus { border-color: var(--neutral-900); box-shadow: 0 0 0 3px rgb(0 0 0 / 6%); }
 .card, .stat-card { border-color: var(--neutral-200); box-shadow: none; }
 .card:hover { box-shadow: none; }

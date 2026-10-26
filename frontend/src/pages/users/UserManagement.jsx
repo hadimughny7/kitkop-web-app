@@ -4,6 +4,8 @@ import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch } from 'react-icons/hi';
 import './UserManagement.css';
+import Modal from '../../components/Modal';
+import LoadingState from '../../components/LoadingState';
 
 const UserManagement = () => {
   const { user, logout } = useAuth();
@@ -63,7 +65,7 @@ const UserManagement = () => {
 
   const roleColors = { owner: 'badge-primary', manajer: 'badge-info', kasir: 'badge-success', kitchen: 'badge-danger', barista: 'badge-info' };
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (loading) return <LoadingState>Memuat pengguna...</LoadingState>;
 
   return (
     <div className="user-management">
@@ -76,7 +78,7 @@ const UserManagement = () => {
         <div className="card-header">
           <div className="search-bar" style={{ maxWidth: 300 }}>
             <HiOutlineSearch className="search-icon" />
-            <input placeholder="Cari pengguna..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input aria-label="Cari pengguna" placeholder="Cari pengguna..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
@@ -105,29 +107,28 @@ const UserManagement = () => {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <Modal label={editUser ? 'Edit Akun Staff' : 'Tambah Akun Staff'} onClose={() => setShowModal(false)}>
             <div className="modal-header">
               <h2>{editUser ? 'Edit Akun Staff' : 'Tambah Akun Staff'}</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowModal(false)}>✕</button>
+              <button className="btn btn-ghost btn-sm" aria-label="Tutup formulir pengguna" onClick={() => setShowModal(false)}>✕</button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Nama</label>
-                  <input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                  <label className="form-label" htmlFor="staff-name">Nama</label>
+                  <input id="staff-name" className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Email</label>
-                  <input className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                  <label className="form-label" htmlFor="staff-email">Email</label>
+                  <input id="staff-email" className="form-input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Username</label>
-                  <input className="form-input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
+                  <label className="form-label" htmlFor="staff-username">Username</label>
+                  <input id="staff-username" className="form-input" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} required />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Password {editUser && '(kosongkan jika tidak diubah)'}</label>
-                  <input className="form-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} {...(!editUser && { required: true })} />
+                  <label className="form-label" htmlFor="staff-password">Password {editUser && '(kosongkan jika tidak diubah)'}</label>
+                  <input id="staff-password" className="form-input" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} {...(!editUser && { required: true })} />
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="staff-role">Role</label>
@@ -146,8 +147,7 @@ const UserManagement = () => {
                 <button type="submit" className="btn btn-primary">{editUser ? 'Simpan' : 'Tambah'}</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

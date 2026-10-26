@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import LoadingState from '../../components/LoadingState';
 import { settingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCog, HiOutlineSave } from 'react-icons/hi';
@@ -8,22 +9,31 @@ const SettingsPage = () => {
   const [servicePercent, setServicePercent] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const res = await settingAPI.getAll();
+  const loadSettings = useCallback(() => {
+    return settingAPI.getAll()
+      .then((res) => {
         const data = res.data.data;
         setTaxPercent(data.tax_percentage ?? '10');
         setServicePercent(data.service_charge_percentage ?? '0');
-      } catch {
+      })
+      .catch(() => {
+        setLoadError(true);
         toast.error('Gagal memuat pengaturan.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadSettings();
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(false);
+    loadSettings();
+  };
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -54,7 +64,14 @@ const SettingsPage = () => {
     }
   };
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (loading) return <LoadingState>Memuat pengaturan...</LoadingState>;
+  if (loadError) return (
+    <div className="empty-state">
+      <h1 className="page-title">Pengaturan</h1>
+      <p role="alert">Pengaturan gagal dimuat. Periksa koneksi lalu coba lagi.</p>
+      <button className="btn btn-primary" onClick={retryLoad}>Coba lagi</button>
+    </div>
+  );
 
   return (
     <div>
@@ -74,8 +91,10 @@ const SettingsPage = () => {
         <form onSubmit={handleSave}>
           <div style={{ padding: 'var(--space-5)' }}>
             <div className="form-group">
-              <label className="form-label">Pajak (%)</label>
+              <label className="form-label" htmlFor="settings-tax">Pajak (%)</label>
               <input
+                id="settings-tax"
+                aria-describedby="settings-tax-help"
                 className="form-input"
                 type="number"
                 min="0"
@@ -85,14 +104,16 @@ const SettingsPage = () => {
                 onChange={(e) => setTaxPercent(e.target.value)}
                 required
               />
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', marginTop: 'var(--space-1)' }}>
+              <p id="settings-tax-help" style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', marginTop: 'var(--space-1)' }}>
                 Persentase pajak yang dikenakan pada setiap pesanan. Contoh: 10 berarti 10%.
               </p>
             </div>
 
             <div className="form-group">
-              <label className="form-label">Service Charge (%)</label>
+              <label className="form-label" htmlFor="settings-service">Service Charge (%)</label>
               <input
+                id="settings-service"
+                aria-describedby="settings-service-help"
                 className="form-input"
                 type="number"
                 min="0"
@@ -102,7 +123,7 @@ const SettingsPage = () => {
                 onChange={(e) => setServicePercent(e.target.value)}
                 required
               />
-              <p style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', marginTop: 'var(--space-1)' }}>
+              <p id="settings-service-help" style={{ fontSize: 'var(--text-xs)', color: 'var(--neutral-500)', marginTop: 'var(--space-1)' }}>
                 Persentase biaya layanan. Isi 0 jika tidak ingin mengenakan service charge.
               </p>
             </div>

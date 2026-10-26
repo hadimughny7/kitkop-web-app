@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { tableAPI } from '../../services/api';
+import Modal from '../../components/Modal';
+import LoadingState from '../../components/LoadingState';
 import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 import {
@@ -124,7 +126,7 @@ const TableManagement = () => {
   const totalActive = tables.filter((t) => t.is_active).length;
   const totalInactive = tables.filter((t) => !t.is_active).length;
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (loading) return <LoadingState>Memuat meja...</LoadingState>;
 
   return (
     <div>
@@ -272,17 +274,17 @@ const TableManagement = () => {
 
       {/* Add/Edit Table Modal */}
       {showTableModal && (
-        <div className="modal-overlay" onClick={() => setShowTableModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <Modal label={editTable ? 'Edit Meja' : 'Tambah Meja Baru'} onClose={() => setShowTableModal(false)}>
             <div className="modal-header">
               <h2>{editTable ? 'Edit Meja' : 'Tambah Meja Baru'}</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowTableModal(false)}>✕</button>
+              <button className="btn btn-ghost btn-sm" aria-label="Tutup formulir meja" onClick={() => setShowTableModal(false)}>✕</button>
             </div>
             <form onSubmit={handleTableSubmit}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label">Nomor Meja</label>
+                  <label className="form-label" htmlFor="table-number">Nomor Meja</label>
                   <input
+                    id="table-number"
                     className="form-input"
                     value={tableForm.table_number}
                     onChange={(e) => setTableForm({ ...tableForm, table_number: e.target.value })}
@@ -291,8 +293,9 @@ const TableManagement = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Kapasitas (orang)</label>
+                  <label className="form-label" htmlFor="table-capacity">Kapasitas (orang)</label>
                   <input
+                    id="table-capacity"
                     type="number"
                     min="1"
                     className="form-input"
@@ -307,17 +310,15 @@ const TableManagement = () => {
                 <button type="submit" className="btn btn-primary">Simpan</button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* QR Modal */}
       {showQRModal && selectedTable && (
-        <div className="modal-overlay" onClick={() => setShowQRModal(false)}>
-          <div className="modal-content" style={{ maxWidth: 400, textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+        <Modal label={`QR Code Meja ${selectedTable.table_number}`} style={{ maxWidth: 400, textAlign: 'center' }} onClose={() => setShowQRModal(false)}>
             <div className="modal-header">
               <h2>QR Code Meja {selectedTable.table_number}</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowQRModal(false)}>✕</button>
+              <button className="btn btn-ghost btn-sm" aria-label="Tutup QR code meja" onClick={() => setShowQRModal(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ alignItems: 'center' }}>
               <div id="qr-print-area" style={{ background: 'white', padding: 'var(--space-4)', borderRadius: 'var(--radius-xl)', display: 'inline-block' }}>
@@ -330,8 +331,7 @@ const TableManagement = () => {
             <div className="modal-footer" style={{ justifyContent: 'center' }}>
               <button className="btn btn-primary" onClick={printQR}><HiOutlinePrinter /> Cetak QR Code</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

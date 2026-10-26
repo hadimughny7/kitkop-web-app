@@ -1,6 +1,7 @@
 import MenuOptionPicker from '../../components/MenuOptionPicker';
 import { activeGroups } from '../../utils/menuOptions';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import LoadingState from '../../components/LoadingState';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { menuAPI, categoryAPI, BACKEND_URL } from '../../services/api';
 import { useCart } from '../../context/useCart';
@@ -17,26 +18,35 @@ const MenuPage = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const navigate = useNavigate();
   const { addItem, removeItem, updateQty, itemCount, items, subtotal } = useCart();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [menuRes, catRes] = await Promise.all([
-          menuAPI.getAll({ available_only: 'true' }),
-          categoryAPI.getAll(),
-        ]);
+  const loadData = useCallback(() => {
+    return Promise.all([
+      menuAPI.getAll({ available_only: 'true' }),
+      categoryAPI.getAll(),
+    ])
+      .then(([menuRes, catRes]) => {
         setMenus(menuRes.data.data);
         setCategories(catRes.data.data);
-      } catch {
+      })
+      .catch(() => {
+        setLoadError(true);
         toast.error('Gagal memuat menu.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(false);
+    loadData();
+  };
 
   const filteredMenus = menus.filter((menu) => {
     const matchCategory = activeCategory === 'all' || menu.category_id === parseInt(activeCategory);
@@ -72,13 +82,20 @@ const MenuPage = () => {
   if (loading) {
     return (
       <div className="customer-page">
-        <div className="loading-screen">
-          <div className="spinner"></div>
-          <p>Memuat menu...</p>
-        </div>
+        <LoadingState>Memuat menu...</LoadingState>
       </div>
     );
   }
+
+  if (loadError) return (
+    <div className="customer-page">
+      <div className="empty-state">
+        <h1>Menu gagal dimuat</h1>
+        <p role="alert">Periksa koneksi internet Anda, lalu coba lagi.</p>
+        <button className="btn btn-primary" onClick={retryLoad}>Coba lagi</button>
+      </div>
+    </div>
+  );
 
   return (
     <div className={`customer-page menu-browse-page${itemCount > 0 ? ' has-cart-summary' : ''}`}>

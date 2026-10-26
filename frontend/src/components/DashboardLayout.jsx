@@ -16,7 +16,7 @@ import {
   HiOutlineBeaker,
   HiOutlineCog,
 } from 'react-icons/hi';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import StaffOrderNotifications from './StaffOrderNotifications';
 import './DashboardLayout.css';
 
@@ -24,6 +24,48 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1024px)').matches);
+  const sidebar = useRef(null);
+  const menuToggle = useRef(null);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1024px)');
+    const update = (event) => { setIsMobile(event.matches); setSidebarOpen(false); };
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile || !sidebarOpen) return;
+    const toggle = menuToggle.current;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    sidebar.current.querySelector('button').focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      toggle?.focus();
+    };
+  }, [isMobile, sidebarOpen]);
+
+  const handleSidebarKeyDown = (event) => {
+    if (!isMobile || !sidebarOpen) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      setSidebarOpen(false);
+    }
+    if (event.key !== 'Tab') return;
+    const controls = [...sidebar.current.querySelectorAll('a[href], button:not(:disabled)')]
+      .filter((element) => element.getClientRects().length > 0);
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -121,7 +163,7 @@ const DashboardLayout = () => {
       )}
 
       {/* Sidebar */}
-      <aside id="dashboard-sidebar" className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+      <aside ref={sidebar} id="dashboard-sidebar" className={`sidebar ${sidebarOpen ? 'open' : ''}`} inert={isMobile && !sidebarOpen} role={isMobile && sidebarOpen ? 'dialog' : undefined} aria-modal={isMobile && sidebarOpen ? true : undefined} aria-label="Navigasi kedai" onKeyDown={handleSidebarKeyDown}>
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <img src="/logo-kitkop.png" alt="Kitkop.id" className="logo-img" />
@@ -170,9 +212,9 @@ const DashboardLayout = () => {
       </aside>
 
       {/* Main content */}
-      <main className="dashboard-main">
+      <main className="dashboard-main" inert={isMobile && sidebarOpen}>
         <header className="dashboard-header">
-          <button className="menu-toggle" aria-label="Buka navigasi" aria-controls="dashboard-sidebar" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
+          <button ref={menuToggle} className="menu-toggle" aria-label="Buka navigasi" aria-controls="dashboard-sidebar" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
             <HiOutlineMenu />
           </button>
           <p className="workspace-label"><span>KITKOP</span><span className="workspace-divider">/</span><span>WORKSPACE</span></p>

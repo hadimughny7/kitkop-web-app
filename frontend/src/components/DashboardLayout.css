@@ -286,7 +286,7 @@
 
 /* The workspace shares Kitkop's black frame and white paper surfaces. */
 .sidebar { color: #dedede; border-right: 0; }
-.sidebar :is(a, button):focus-visible { outline-color: white; }
+html .sidebar :is(a, button):focus-visible { outline-color: white; }
 .sidebar-header { border-color: #303030; min-height: 96px; }
 .logo-img { border: 0; background: white; width: 44px; height: 44px; }
 .logo-text { color: white; font-size: 26px; letter-spacing: -0.06em; }

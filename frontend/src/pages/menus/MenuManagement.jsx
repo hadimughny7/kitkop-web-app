@@ -1,4 +1,6 @@
 import MenuOptionsEditor from './MenuOptionsEditor';
+import Modal from '../../components/Modal';
+import LoadingState from '../../components/LoadingState';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { menuAPI, categoryAPI, stockAPI, optionTemplateAPI, BACKEND_URL } from '../../services/api';
 import { useAuth } from '../../context/useAuth';
@@ -183,7 +185,7 @@ const MenuManagement = () => {
     } catch (err) { toast.error(err.response?.data?.message || 'Gagal menghapus kategori.'); }
   };
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (loading) return <LoadingState>Memuat pengelolaan menu...</LoadingState>;
 
   return (
     <div className="menu-management">
@@ -208,9 +210,9 @@ const MenuManagement = () => {
         <div className="card-header" style={{ flexWrap: 'wrap', gap: 'var(--space-4)' }}>
           <div className="search-bar" style={{ flex: '1 1 300px' }}>
             <HiOutlineSearch className="search-icon" />
-            <input placeholder="Cari menu..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            <input aria-label="Cari menu" placeholder="Cari menu..." value={search} onChange={(e) => setSearch(e.target.value)} />
           </div>
-          <select className="form-select" style={{ width: '200px' }} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <select aria-label="Filter kategori menu" className="form-select" style={{ width: '200px' }} value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
             <option value="">Semua Kategori</option>
             {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -303,8 +305,8 @@ const MenuManagement = () => {
                 </>}
                 <MenuOptionsEditor groups={optionGroups} onChange={setOptionGroups} materials={materials} disabled={saving} availabilityOnly={!isManager} onAvailability={toggleOptionAvailability} templates={templates} templatesLoading={templatesLoading} templatesError={templatesError} onReloadTemplates={loadTemplates} onDeleteTemplate={deleteTemplate} deletingTemplate={deletingTemplate} />
                 {isManager && <div className="form-group">
-                  <label className="form-label">Foto Menu {editMenu && '(Kosongkan jika tidak diubah)'}</label>
-                  <input type="file" className="form-input" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
+                  <label className="form-label" htmlFor="menu-photo">Foto Menu {editMenu && '(Kosongkan jika tidak diubah)'}</label>
+                  <input id="menu-photo" type="file" className="form-input" accept="image/*" onChange={(e) => setImageFile(e.target.files[0])} />
                 </div>}
               </div>
               <div className="modal-footer">
@@ -317,11 +319,10 @@ const MenuManagement = () => {
 
       {/* Category Modal */}
       {showCatModal && (
-        <div className="modal-overlay" onClick={() => setShowCatModal(false)}>
-          <div className="modal-content" style={{ maxWidth: 600 }} onClick={(e) => e.stopPropagation()}>
+        <Modal label="Kelola Kategori Menu" style={{ maxWidth: 600 }} onClose={() => setShowCatModal(false)}>
             <div className="modal-header">
               <h2>Kelola Kategori Menu</h2>
-              <button className="btn btn-ghost btn-sm" onClick={() => setShowCatModal(false)}>✕</button>
+              <button className="btn btn-ghost btn-sm" aria-label="Tutup kategori menu" onClick={() => setShowCatModal(false)}>✕</button>
             </div>
             <div className="modal-body" style={{ background: 'var(--neutral-50)' }}>
               <form onSubmit={handleCatSubmit} style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', alignItems: 'flex-end', marginBottom: 'var(--space-4)' }}>
@@ -352,8 +353,7 @@ const MenuManagement = () => {
                 </table>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );
