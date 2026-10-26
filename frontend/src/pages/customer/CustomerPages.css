@@ -1,6 +1,4 @@
-/* ============================================
-   CUSTOMER PAGES
-   ============================================ */
+/* Customer pages */
 .customer-page {
   min-height: 100vh;
   background: var(--surface-secondary);
@@ -625,9 +623,7 @@
   font-weight: 600;
 }
 
-/* ============================
-   Estimated Time Badge
-   ============================ */
+/* Estimated time badge */
 .est-time-badge {
   display: inline-flex;
   align-items: center;
@@ -644,9 +640,7 @@
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* ============================
-   Customer Progress Bar
-   ============================ */
+/* Customer progress bar */
 .customer-progress-section {
   background: var(--neutral-50);
   border-radius: var(--radius-xl);
@@ -693,9 +687,7 @@
   margin: 0;
 }
 
-/* ============================
-   Customer Item List with Status
-   ============================ */
+/* Customer item list with status */
 .customer-items-list {
   display: flex;
   flex-direction: column;

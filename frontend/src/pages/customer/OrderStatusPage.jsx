@@ -137,7 +137,6 @@ const OrderStatusPage = () => {
   const formatCurrency = (val) =>
     new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(val || 0);
 
-  // === Compute estimated time ===
   const getEstimatedMinutes = () => {
     if (!order?.items) return 0;
     const activeItems = order.items.filter(i => i.status !== 'rejected' && i.status !== 'completed');
@@ -149,7 +148,6 @@ const OrderStatusPage = () => {
     return totalMinutes;
   };
 
-  // === Item progress stats ===
   const getItemProgress = () => {
     if (!order?.items) return { total: 0, completed: 0, pct: 0 };
     const active = order.items.filter(i => i.status !== 'rejected');
@@ -158,7 +156,6 @@ const OrderStatusPage = () => {
     return { total: active.length, completed: completed.length, pct };
   };
 
-  // === Item status icon ===
   const getItemIcon = (item) => {
     if (item.status === 'completed') return <HiCheck aria-label="Selesai" />;
     if (item.status === 'preparing') return <HiOutlineRefresh aria-label="Diproses" />;

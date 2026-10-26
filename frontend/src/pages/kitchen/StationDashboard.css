@@ -100,9 +100,7 @@
   color: var(--neutral-500);
 }
 
-/* ============================
-   Progress Bar
-   ============================ */
+/* Progress bar */
 .item-progress-bar-container {
   padding: var(--space-2) var(--space-5);
   display: flex;
@@ -134,9 +132,7 @@
   white-space: nowrap;
 }
 
-/* ============================
-   Order Card Body & Items
-   ============================ */
+/* Order card body and items */
 .order-card-body {
   padding: var(--space-4) var(--space-5);
 }
@@ -235,9 +231,7 @@
   padding-left: 28px;
 }
 
-/* ============================
-   Per-item Action Buttons
-   ============================ */
+/* Per-item action buttons */
 .item-action-btns {
   display: flex;
   gap: 4px;
@@ -288,9 +282,7 @@
   background: rgba(239, 68, 68, 0.2);
 }
 
-/* ============================
-   Card Actions (Bulk buttons)
-   ============================ */
+/* Bulk order actions */
 .order-card-actions {
   padding: var(--space-3) var(--space-5) var(--space-4);
   display: flex;

@@ -1,6 +1,4 @@
-/* ============================================
-   POS DASHBOARD — INLINE KASIR INTERFACE
-   ============================================ */
+/* POS dashboard: inline cashier interface */
 
 /* Inline POS layout — fills the dashboard content area */
 .pos-page {
@@ -21,9 +19,7 @@
   border: 1px solid var(--neutral-100);
 }
 
-/* ============================
-   LEFT: Menu Browser Panel
-   ============================ */
+/* Menu browser panel */
 .pos-menu-panel.pos-inline-panel {
   flex: 1;
   display: flex;
@@ -180,9 +176,7 @@
   box-shadow: none;
 }
 
-/* ============================
-   RIGHT: Cart Panel
-   ============================ */
+/* Cart panel */
 .pos-cart-panel.pos-inline-panel {
   width: 380px;
   min-width: 320px;
@@ -472,9 +466,7 @@
   transform: none !important;
 }
 
-/* ============================
-   RESPONSIVE
-   ============================ */
+/* Responsive layout */
 @media (max-width: 900px) {
   .pos-inline-layout {
     flex-direction: column;

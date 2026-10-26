@@ -38,17 +38,11 @@ api.interceptors.response.use(
   }
 );
 
-// ============================================
-// AUTH
-// ============================================
 export const authAPI = {
   login: (data) => api.post('/auth/login', data),
   getMe: () => api.get('/auth/me'),
 };
 
-// ============================================
-// USERS
-// ============================================
 export const userAPI = {
   getAll: (params) => api.get('/users', { params }),
   getById: (id) => api.get(`/users/${id}`),
@@ -57,9 +51,6 @@ export const userAPI = {
   delete: (id) => api.delete(`/users/${id}`),
 };
 
-// ============================================
-// MENUS
-// ============================================
 export const menuAPI = {
   getAll: (params) => api.get('/menus', { params }),
   getById: (id) => api.get(`/menus/${id}`),
@@ -75,9 +66,6 @@ export const menuAPI = {
   toggleAvailability: (id) => api.patch(`/menus/${id}/availability`),
 };
 
-// ============================================
-// CATEGORIES
-// ============================================
 export const categoryAPI = {
   getAll: () => api.get('/categories'),
   create: (data) => api.post('/categories', data),
@@ -85,9 +73,6 @@ export const categoryAPI = {
   delete: (id) => api.delete(`/categories/${id}`),
 };
 
-// ============================================
-// TABLES
-// ============================================
 export const tableAPI = {
   getAll: () => api.get('/tables'),
   getById: (id) => api.get(`/tables/${id}`),
@@ -98,9 +83,6 @@ export const tableAPI = {
   bulkToggle: (isActive) => api.patch('/tables/bulk-toggle', { is_active: isActive }),
 };
 
-// ============================================
-// ORDERS
-// ============================================
 export const orderAPI = {
   create: async (data) => {
     const response = await api.post('/orders', data);
@@ -120,9 +102,6 @@ export const orderAPI = {
   completeAllItems: (orderId) => api.patch(`/orders/${orderId}/items/complete-all`),
 };
 
-// ============================================
-// STOCKS
-// ============================================
 export const stockAPI = {
   getAll: (params) => api.get('/stocks', { params }),
   create: (data) => api.post('/stocks', data),
@@ -134,9 +113,6 @@ export const stockAPI = {
   getLogsByDate: (params) => api.get('/stocks/logs/by-date', { params }),
 };
 
-// ============================================
-// RECIPES
-// ============================================
 export const recipeAPI = {
   getAll: (params) => api.get('/recipes', { params }),
   create: (data) => api.post('/recipes', data),
@@ -144,9 +120,6 @@ export const recipeAPI = {
   delete: (id) => api.delete(`/recipes/${id}`),
 };
 
-// ============================================
-// PAYMENTS
-// ============================================
 const paymentAccess = orderNumber => orderNumber === undefined ? {} : {
   headers: { 'X-Order-Tracking-Token': getOrderTrackingToken(orderNumber) || '' },
 };
@@ -158,9 +131,6 @@ export const paymentAPI = {
   payCash: (orderId) => api.post(`/payments/${orderId}/cash`),
 };
 
-// ============================================
-// REPORTS
-// ============================================
 export const reportAPI = {
   getDashboard: () => api.get('/reports/dashboard'),
   getOrders: (params) => api.get('/reports/orders', { params }),
@@ -171,9 +141,6 @@ export const reportAPI = {
   exportReportDashboard: (params) => api.get('/reports/report-dashboard/export', { params, responseType: 'blob' }),
 };
 
-// ============================================
-// SETTINGS
-// ============================================
 export const settingAPI = {
   getAll: () => api.get('/settings'),
   update: (data) => api.put('/settings', data),

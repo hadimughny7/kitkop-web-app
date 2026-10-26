@@ -10,15 +10,12 @@ const migrate = async () => {
     await sequelize.authenticate();
     console.log('✅ Connected to database');
 
-    // 1. Alter ENUM: add new values
     // MySQL requires recreating the column for ENUM changes
     console.log('🔄 Updating status ENUM...');
     
-    // First update existing 'active' values to 'pending'
     await sequelize.query(`UPDATE order_items SET status = 'pending' WHERE status = 'active'`);
     console.log('  ✅ Updated existing "active" items to "pending"');
 
-    // Alter the column to new ENUM values
     await sequelize.query(`
       ALTER TABLE order_items 
       MODIFY COLUMN status ENUM('pending', 'preparing', 'completed', 'rejected') 
@@ -26,7 +23,6 @@ const migrate = async () => {
     `);
     console.log('  ✅ Status ENUM updated');
 
-    // 2. Add completed_at column if it doesn't exist
     console.log('🔄 Adding completed_at column...');
     try {
       await sequelize.query(`

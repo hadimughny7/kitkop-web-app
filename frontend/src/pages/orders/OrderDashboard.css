@@ -1,6 +1,4 @@
-/* ============================================
-   ORDER DASHBOARD — Daftar Semua Pesanan
-   ============================================ */
+/* Order dashboard */
 
 /* Stats row */
 .order-stats-row {
@@ -172,9 +170,7 @@
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* ============================================
-   RECEIPT / STRUK — Print Styles
-   ============================================ */
+/* Receipt print styles */
 
 .receipt-container {
   display: none;
