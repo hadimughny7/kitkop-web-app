@@ -107,7 +107,6 @@ const SettingsPage = () => {
               </p>
             </div>
 
-            {/* Preview */}
             <div style={{
               background: 'var(--neutral-50)',
               borderRadius: 'var(--radius-md)',

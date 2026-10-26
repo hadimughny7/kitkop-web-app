@@ -151,7 +151,6 @@ const ReportDashboard = () => {
     }
   };
 
-  // Format chart data labels
   const formatChartData = () => {
     if (!data?.chartData) return [];
     const effectivePeriod = data.period?.type;
@@ -174,9 +173,6 @@ const ReportDashboard = () => {
     });
   };
 
-  // ============================================
-  // RENDER — Skeleton Loading
-  // ============================================
   if (loading) {
     return (
       <div className="report-dashboard">
@@ -202,9 +198,6 @@ const ReportDashboard = () => {
     );
   }
 
-  // ============================================
-  // RENDER — Error State
-  // ============================================
   if (error) {
     return (
       <div className="report-dashboard">
@@ -234,12 +227,9 @@ const ReportDashboard = () => {
   const stockStatus = data?.stockStatus || [];
   const dailySales = data?.dailySales || [];
 
-  // ============================================
-  // RENDER — Main Dashboard
-  // ============================================
   return (
     <div className="report-dashboard">
-      {/* ---- Header ---- */}
+      {/* Header */}
       <div className="page-header">
         <div>
           <h1 className="page-title">Dashboard Laporan</h1>
@@ -256,7 +246,7 @@ const ReportDashboard = () => {
         </button>
       </div>
 
-      {/* ---- Period Filter ---- */}
+      {/* Period Filter */}
       <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
         <div className="card-body">
           <div className="period-filter">
@@ -295,7 +285,7 @@ const ReportDashboard = () => {
         </div>
       </div>
 
-      {/* ---- KPI Cards ---- */}
+      {/* KPI Cards */}
       <div className="kpi-grid">
         <div className="kpi-card" id="kpi-total-penjualan">
           <div className="kpi-icon">
@@ -341,7 +331,7 @@ const ReportDashboard = () => {
         </div>
       </div>
 
-      {/* ---- Grafik Penjualan ---- */}
+      {/* Grafik Penjualan */}
       <div className="card chart-section">
         <div className="card-header">
           <h3 className="section-title">Grafik Penjualan</h3>
@@ -394,7 +384,7 @@ const ReportDashboard = () => {
         </div>
       </div>
 
-      {/* ---- Menu Terlaris + Status Stok ---- */}
+      {/* Menu Terlaris + Status Stok */}
       <div className="two-col">
         {/* Menu Terlaris */}
         <div className="card">
@@ -464,7 +454,7 @@ const ReportDashboard = () => {
         </div>
       </div>
 
-      {/* ---- Tabel Laporan Penjualan ---- */}
+      {/* Tabel Laporan Penjualan */}
       <div className="card" style={{ marginBottom: 'var(--space-6)' }}>
         <div className="card-header">
           <h3 className="section-title">Laporan Penjualan</h3>

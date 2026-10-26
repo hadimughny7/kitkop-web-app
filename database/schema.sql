@@ -1,7 +1,5 @@
--- ============================================
 -- Cafe Kitkop - Database Schema
 -- Sistem Informasi Pemesanan Menu Terintegrasi POS
--- ============================================
 
 CREATE DATABASE IF NOT EXISTS kitkop_db
   CHARACTER SET utf8mb4
@@ -9,9 +7,7 @@ CREATE DATABASE IF NOT EXISTS kitkop_db
 
 USE kitkop_db;
 
--- ============================================
--- 1. USERS (Staff accounts)
--- ============================================
+-- Users (Staff accounts)
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -27,9 +23,7 @@ CREATE TABLE IF NOT EXISTS users (
   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- ============================================
--- 2. CUSTOMERS (Identitas pemesan, tanpa akun)
--- ============================================
+-- Customers (Identitas pemesan, tanpa akun)
 CREATE TABLE IF NOT EXISTS customers (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -38,9 +32,7 @@ CREATE TABLE IF NOT EXISTS customers (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
--- 3. TABLES (Meja cafe)
--- ============================================
+-- Tables (Meja cafe)
 CREATE TABLE IF NOT EXISTS tables_ (
   id INT AUTO_INCREMENT PRIMARY KEY,
   table_number VARCHAR(10) NOT NULL UNIQUE,
@@ -49,9 +41,7 @@ CREATE TABLE IF NOT EXISTS tables_ (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
--- 4. MENU CATEGORIES
--- ============================================
+-- Menu categories
 CREATE TABLE IF NOT EXISTS menu_categories (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(50) NOT NULL UNIQUE,
@@ -60,9 +50,7 @@ CREATE TABLE IF NOT EXISTS menu_categories (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
--- 5. MENUS
--- ============================================
+-- Menus
 CREATE TABLE IF NOT EXISTS menus (
   id INT AUTO_INCREMENT PRIMARY KEY,
   category_id INT NOT NULL,
@@ -76,9 +64,7 @@ CREATE TABLE IF NOT EXISTS menus (
   FOREIGN KEY (category_id) REFERENCES menu_categories(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- ============================================
--- 6. RAW MATERIALS (Bahan baku)
--- ============================================
+-- Raw materials (Bahan baku)
 CREATE TABLE IF NOT EXISTS raw_materials (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -91,9 +77,7 @@ CREATE TABLE IF NOT EXISTS raw_materials (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- ============================================
--- 7. MENU RECIPES (Relasi menu <-> bahan baku)
--- ============================================
+-- Menu recipes (Relasi menu <-> bahan baku)
 CREATE TABLE IF NOT EXISTS menu_recipes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   menu_id INT NOT NULL,
@@ -104,9 +88,7 @@ CREATE TABLE IF NOT EXISTS menu_recipes (
   UNIQUE KEY unique_menu_material (menu_id, raw_material_id)
 ) ENGINE=InnoDB;
 
--- ============================================
--- 8. ORDERS
--- ============================================
+-- Orders
 CREATE TABLE IF NOT EXISTS orders (
   id INT AUTO_INCREMENT PRIMARY KEY,
   table_id INT DEFAULT NULL,
@@ -128,9 +110,7 @@ CREATE TABLE IF NOT EXISTS orders (
   INDEX idx_orders_order_type (order_type)
 ) ENGINE=InnoDB;
 
--- ============================================
--- 9. ORDER ITEMS
--- ============================================
+-- Order items
 CREATE TABLE IF NOT EXISTS order_items (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
@@ -143,9 +123,7 @@ CREATE TABLE IF NOT EXISTS order_items (
   FOREIGN KEY (menu_id) REFERENCES menus(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
--- ============================================
--- 10. ORDER STATUS LOGS
--- ============================================
+-- Order status logs
 CREATE TABLE IF NOT EXISTS order_status_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
@@ -158,9 +136,7 @@ CREATE TABLE IF NOT EXISTS order_status_logs (
   INDEX idx_status_logs_changed_at (changed_at)
 ) ENGINE=InnoDB;
 
--- ============================================
--- 11. TRANSACTIONS (Pembayaran)
--- ============================================
+-- Transactions (Pembayaran)
 CREATE TABLE IF NOT EXISTS transactions (
   id INT AUTO_INCREMENT PRIMARY KEY,
   order_id INT NOT NULL,
@@ -177,9 +153,7 @@ CREATE TABLE IF NOT EXISTS transactions (
   INDEX idx_transactions_created_at (created_at)
 ) ENGINE=InnoDB;
 
--- ============================================
--- 12. STOCK LOGS (Riwayat perubahan stok)
--- ============================================
+-- Stock logs (Riwayat perubahan stok)
 CREATE TABLE IF NOT EXISTS stock_logs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   raw_material_id INT NOT NULL,
@@ -195,9 +169,7 @@ CREATE TABLE IF NOT EXISTS stock_logs (
   INDEX idx_stock_logs_created_at (created_at)
 ) ENGINE=InnoDB;
 
--- ============================================
--- SEED DATA
--- ============================================
+-- Seed data
 
 -- Default owner account (password: owner123)
 -- Hash generated with bcryptjs, 10 rounds
@@ -208,13 +180,13 @@ INSERT INTO users (name, email, username, password_hash, role) VALUES
 ('Kitchen Kitkop', 'kitchen@kitkop.com', 'kitchen', '$2a$10$bkqHe3r571kYKEj2s/ShW.ExLavO6wtb3TMpGnywhtpypc4VWlWPu', 'kitchen'),
 ('Barista Kitkop', 'barista@kitkop.com', 'barista', '$2a$10$bkqHe3r571kYKEj2s/ShW.ExLavO6wtb3TMpGnywhtpypc4VWlWPu', 'barista');
 
--- 2. TABLES
+-- Tables
 INSERT INTO tables_ (table_number) VALUES
 ('A1'), ('A2'), ('A3'), ('A4'), ('A5'),
 ('B1'), ('B2'), ('B3'), ('B4'), ('B5'),
 ('Outdoor 1'), ('Outdoor 2'), ('Outdoor 3');
 
--- 3. MENU CATEGORIES
+-- Menu categories
 INSERT INTO menu_categories (name, description, sort_order) VALUES
 ('Coffee (Espresso Based)', 'Olahan kopi berbasis espresso', 1),
 ('Manual Brew', 'Kopi seduh manual V60, Japanese, dll', 2),
@@ -223,7 +195,7 @@ INSERT INTO menu_categories (name, description, sort_order) VALUES
 ('Main Course', 'Makanan berat', 5),
 ('Snack', 'Camilan pendamping kopi', 6);
 
--- 4. RAW MATERIALS (Bahan Baku Coffeeshop)
+-- Raw materials (Bahan Baku Coffeeshop)
 INSERT INTO raw_materials (name, category, stock, unit, min_stock, status) VALUES
 -- Kopi & Susu
 ('House Blend Espresso (Robusta+Arabica)', 'Kopi', 5000, 'g', 1000, 'aman'),
@@ -255,7 +227,7 @@ INSERT INTO raw_materials (name, category, stock, unit, min_stock, status) VALUE
 ('Minyak Goreng', 'Bahan Pelengkap', 5000, 'ml', 1000, 'aman'),
 ('Bumbu Nasi Goreng', 'Bahan Pelengkap', 1000, 'g', 200, 'aman');
 
--- 5. MENUS
+-- Menus
 INSERT INTO menus (category_id, name, description, price, is_available) VALUES
 -- Coffee (1)
 (1, 'Espresso', 'Single shot espresso (30ml)', 15000, 1),
@@ -286,7 +258,7 @@ INSERT INTO menus (category_id, name, description, price, is_available) VALUES
 (6, 'French Fries', 'Kentang goreng renyah', 20000, 1),
 (6, 'Mix Platter', 'Kentang goreng dan sosis sapi', 30000, 1);
 
--- 6. MENU RECIPES (Logika Pengurangan Stok Otomatis)
+-- Menu recipes (Logika Pengurangan Stok Otomatis)
 INSERT INTO menu_recipes (menu_id, raw_material_id, quantity_used) VALUES
 -- Espresso (1) -> 18g Kopi, Cup Hot
 (1, 1, 18), (1, 15, 1),

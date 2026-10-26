@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Stack+Sans+Headline:wght@400;500;600;700&display=swap');
 
-/* ============================================
-   CSS DESIGN SYSTEM — Cafe Kitkop
-   ============================================ */
+/* Kitkop design system */
 
 :root {
   /* Primary Colors - Kitkop Black & White */
@@ -121,9 +119,7 @@
   --container-max: 1280px;
 }
 
-/* ============================================
-   RESET & BASE
-   ============================================ */
+/* Reset and base */
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -178,9 +174,7 @@ input, select, textarea {
   font-size: var(--text-base);
 }
 
-/* ============================================
-   UTILITY CLASSES
-   ============================================ */
+/* Utility classes */
 
 /* Buttons */
 .btn {

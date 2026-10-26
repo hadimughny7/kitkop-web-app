@@ -1,8 +1,4 @@
-/**
- * Notification Sound Utility
- * Uses Web Audio API to generate notification tones — no external files needed.
- * Supports repeating alerts that continue until manually stopped.
- */
+// Notification tones use Web Audio synthesis without external audio files.
 
 let audioContext = null;
 let repeatInterval = null;
@@ -61,12 +57,7 @@ const playChime = () => {
   }
 };
 
-/**
- * Play a notification sound that loops 3 times.
- * Each chime is ~1.35s long, with a gap between repeats.
- * @param {number} repeatCount - Number of times to play (default: 3)
- * @param {number} delayMs - Delay between each chime in ms (default: 1800)
- */
+// Each chime lasts about 1.35 seconds; delayMs sets the interval between starts.
 export const playNotificationSound = (repeatCount = 3, delayMs = 1800) => {
   let played = 0;
 
@@ -82,28 +73,19 @@ export const playNotificationSound = (repeatCount = 3, delayMs = 1800) => {
   playNext();
 };
 
-/**
- * Start a repeating notification alert.
- * Plays the chime every `intervalMs` until stopNotificationAlert() is called.
- * @param {number} intervalMs - Interval between chimes in ms (default: 3000 = 3 seconds)
- */
+// The alert repeats until stopNotificationAlert() is called.
 export const startNotificationAlert = (intervalMs = 3000) => {
   // Don't stack multiple alerts
   if (isRinging) return;
   isRinging = true;
 
-  // Play immediately
   playChime();
 
-  // Repeat
   repeatInterval = setInterval(() => {
     playChime();
   }, intervalMs);
 };
 
-/**
- * Stop the repeating notification alert.
- */
 export const stopNotificationAlert = () => {
   if (repeatInterval) {
     clearInterval(repeatInterval);
@@ -112,9 +94,6 @@ export const stopNotificationAlert = () => {
   isRinging = false;
 };
 
-/**
- * Check if the alert is currently ringing.
- */
 export const isAlertRinging = () => isRinging;
 
 /**
@@ -128,6 +107,6 @@ export const initAudioContext = () => {
       ctx.resume();
     }
   } catch {
-    // ignore
+    // Audio initialization is optional when the browser denies access.
   }
 };

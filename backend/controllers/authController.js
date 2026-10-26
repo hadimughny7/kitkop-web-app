@@ -18,7 +18,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Find user by email or username
     const user = req.loginUser !== undefined ? req.loginUser : await User.findOne({
       where: {
         [require('sequelize').Op.or]: [
@@ -42,7 +41,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Verify password
     const isMatch = await bcrypt.compare(password, user.password_hash);
     if (!isMatch) {
       return res.status(401).json({
@@ -51,7 +49,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generate JWT
     const token = jwt.sign(
       { id: user.id, role: user.role, sessionVersion: user.session_version },
       process.env.JWT_SECRET,

@@ -37,7 +37,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       if (Number(table.is_active) !== 1) fail('Meja tidak aktif. Silakan pilih meja lain atau hubungi kasir.', 409);
     }
 
-    // Calculate totals
     let subtotalCents = 0;
     const orderItems = [];
 
@@ -79,7 +78,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       });
     }
 
-    // Fetch tax & service charge percentages from settings
     const taxSetting = await Setting.findByPk('tax_percentage', { transaction: t });
     const serviceSetting = await Setting.findByPk('service_charge_percentage', { transaction: t });
     const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
@@ -93,10 +91,8 @@ const createOrder = async (req, res, next, attempt = 0) => {
     const hasFood = orderItems.some(i => i.item_type === 'makanan' || i.item_type === 'snack');
     const hasDrink = orderItems.some(i => i.item_type === 'minuman');
 
-    // Determine cashier_id
     let assignedCashierId = req.user ? req.user.id : null;
     if (!assignedCashierId) {
-      // Find active kasir
       let activeCashier = await User.findOne({ where: { role: 'kasir', is_active: true }, transaction: t });
       if (!activeCashier) {
         // Fallback to manajer or owner
@@ -121,7 +117,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       email: customer_email || null,
     }, { transaction: t });
 
-    // Create order
     const order_number = await allocateOrderNumber(t, { resync: attempt > 0 });
     const order = await Order.create({
       table_id: selectedTableId,
@@ -136,7 +131,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       order_type: order_type || 'qr',
     }, { transaction: t });
 
-    // Create order items
     for (const item of orderItems) {
       await OrderItem.create({
         order_id: order.id,
@@ -144,7 +138,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       }, { transaction: t });
     }
 
-    // Create initial status log
     await OrderStatusLog.create({
       order_id: order.id,
       status: 'pending',
@@ -154,7 +147,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
     const trackingToken = issueTrackingToken(order);
     await t.commit();
 
-    // Fetch complete order for response
     const completeOrder = await Order.findByPk(order.id, {
       include: [
         { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
@@ -164,7 +156,6 @@ const createOrder = async (req, res, next, attempt = 0) => {
       ],
     });
 
-    // Emit Socket.io event for real-time update
     const io = req.app.get('io');
     if (io) {
       emitRealtime(io, 'new-order', { orderId: order.id, orderNumber: order.order_number, status: order.status });
@@ -341,7 +332,6 @@ const updateOrderStatus = async (req, res, next) => {
       return { order, stockReturned, unchanged: false };
     });
 
-    // Emit Socket.io event
     const io = req.app.get('io');
     if (io && !unchanged) {
       emitRealtime(io, 'order-status-update', {
@@ -402,7 +392,6 @@ const rejectOrderItem = async (req, res, next) => {
     }
     const notStarted = orderItem.status === 'pending' && order.status !== 'ready';
 
-    // Mark as rejected
     orderItem.status = 'rejected';
     await orderItem.save({ transaction: t });
 
@@ -412,7 +401,6 @@ const rejectOrderItem = async (req, res, next) => {
       await refundStockForOrderItem(order.id, orderItem, t);
     }
 
-    // Recalculate totals
     const allItems = await OrderItem.findAll({ where: { order_id: order.id }, transaction: t });
     let activeTotal = 0;
     let allRejected = true;
@@ -428,7 +416,6 @@ const rejectOrderItem = async (req, res, next) => {
       order.status = 'cancelled';
     }
 
-    // Fetch tax & service charge percentages from settings
     const taxSetting = await Setting.findByPk('tax_percentage', { transaction: t });
     const serviceSetting = await Setting.findByPk('service_charge_percentage', { transaction: t });
     const taxRate = taxSetting ? parseFloat(taxSetting.value) / 100 : 0.10;
@@ -454,7 +441,6 @@ const rejectOrderItem = async (req, res, next) => {
 
     await t.commit();
 
-    // Fetch updated order to broadcast
     const completeOrder = await Order.findByPk(order.id, {
       include: [
         { model: OrderItem, as: 'items', attributes: { exclude: ['stock_usage', 'stock_deducted', 'stock_refunded'] }, include: [{ model: Menu, as: 'menu', attributes: ['id', 'name', 'image'] }] },
@@ -558,7 +544,6 @@ const updateItemStatus = async (req, res, next) => {
     });
     const { order, orderItem } = result;
 
-    // Emit socket event
     const io = req.app.get('io');
     if (io) {
       emitRealtime(io, 'order-item-update', {
@@ -597,13 +582,11 @@ const processAllItems = async (req, res, next) => {
     const result = await sequelize.transaction(async (transaction) => {
       const order = await getProductionOrder(orderId, transaction, ['confirmed', 'preparing']);
 
-      // Update all pending items to preparing
       await OrderItem.update(
         { status: 'preparing' },
         { where: { order_id: orderId, status: 'pending' }, transaction }
       );
 
-      // Update order status to preparing
       if (order.status === 'confirmed') {
         order.status = 'preparing';
         await order.save({ transaction });
@@ -659,19 +642,16 @@ const completeAllItems = async (req, res, next) => {
 
       const now = new Date();
 
-      // Update all preparing items to completed
       await OrderItem.update(
         { status: 'completed', completed_at: now },
         { where: { order_id: orderId, status: 'preparing' }, transaction }
       );
 
-      // Also complete any remaining pending items
       await OrderItem.update(
         { status: 'completed', completed_at: now },
         { where: { order_id: orderId, status: 'pending' }, transaction }
       );
 
-      // Update order status to completed
       order.status = 'completed';
       await order.save({ transaction });
       await OrderStatusLog.create({

@@ -45,7 +45,6 @@ const KitchenDashboard = () => {
     };
   }, [loadOrders]);
 
-  // === Per-item status update ===
   const handleItemStatus = async (orderId, itemId, status) => {
     try {
       await orderAPI.updateItemStatus(orderId, itemId, status);
@@ -56,7 +55,6 @@ const KitchenDashboard = () => {
     }
   };
 
-  // === Bulk: Process all items ===
   const handleProcessAll = async (orderId) => {
     try {
       await orderAPI.processAllItems(orderId);
@@ -67,7 +65,6 @@ const KitchenDashboard = () => {
     }
   };
 
-  // === Bulk: Complete all items ===
   const handleCompleteAll = async (orderId) => {
     try {
       await orderAPI.completeAllItems(orderId);
@@ -90,7 +87,6 @@ const KitchenDashboard = () => {
 
   const formatTime = (date) => new Date(date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-  // Get item status info
   const getItemStatusInfo = (item) => {
     if (item.status === 'completed') return { label: 'Selesai', className: 'item-completed', icon: <HiOutlineCheck aria-hidden="true" /> };
     if (item.status === 'preparing') return { label: 'Diproses', className: 'item-preparing', icon: <HiOutlineRefresh aria-hidden="true" /> };
@@ -98,7 +94,6 @@ const KitchenDashboard = () => {
     return { label: 'Menunggu', className: 'item-pending', icon: <HiOutlineClock aria-hidden="true" /> };
   };
 
-  // Count item statuses in an order
   const getOrderItemStats = (order) => {
     const items = order.items || [];
     const active = items.filter(i => i.status !== 'rejected');
@@ -179,7 +174,6 @@ const KitchenDashboard = () => {
                   </span>
                 </div>
 
-                {/* Progress bar */}
                 {order.status === 'preparing' && stats.total > 0 && (
                   <div className="item-progress-bar-container">
                     <div className="item-progress-bar">
@@ -197,12 +191,10 @@ const KitchenDashboard = () => {
                       return (
                         <li key={item.id} className={`order-item-row ${info.className}`}>
                           <div className="item-main-row">
-                            {/* Status icon */}
                             <span className="item-status-icon">{info.icon}</span>
                             <span className="item-qty">{item.qty}×</span>
                             <span className="item-name">{item.menu?.name}</span>
 
-                            {/* Per-item action buttons */}
                             <div className="item-action-btns">
                               {order.status !== 'completed' && item.status === 'pending' && (
                                 <button
@@ -234,7 +226,6 @@ const KitchenDashboard = () => {
 
                 <div className="order-card-actions">
                   {order.status === 'completed' && <span className="badge badge-success"><HiOutlineCheck aria-hidden="true" /> Selesai</span>}
-                  {/* Bulk actions */}
                   {order.status === 'confirmed' && (
                     <button className="btn btn-primary btn-sm" onClick={() => handleProcessAll(order.id)}>
                         Proses Semua

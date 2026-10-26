@@ -19,18 +19,12 @@ const MenuOptionGroup = require('./MenuOptionGroup');
 Menu.belongsToMany(OptionGroup, { through: MenuOptionGroup, foreignKey: 'menu_id', otherKey: 'option_group_id', as: 'optionGroups' });
 OptionGroup.belongsToMany(Menu, { through: MenuOptionGroup, foreignKey: 'option_group_id', otherKey: 'menu_id', as: 'menus' });
 
-// ============================================
-// ASSOCIATIONS
-// ============================================
 
-// User - created_by (self-reference)
 User.belongsTo(User, { as: 'creator', foreignKey: 'created_by' });
 
-// MenuCategory <-> Menu
 MenuCategory.hasMany(Menu, { foreignKey: 'category_id', as: 'menus' });
 Menu.belongsTo(MenuCategory, { foreignKey: 'category_id', as: 'category' });
 
-// Menu <-> RawMaterial (through MenuRecipe)
 Menu.belongsToMany(RawMaterial, {
   through: MenuRecipe,
   foreignKey: 'menu_id',
@@ -47,28 +41,23 @@ Menu.hasMany(MenuRecipe, { foreignKey: 'menu_id', as: 'recipes' });
 MenuRecipe.belongsTo(Menu, { foreignKey: 'menu_id', as: 'menu' });
 MenuRecipe.belongsTo(RawMaterial, { foreignKey: 'raw_material_id', as: 'rawMaterial' });
 
-// Order associations
 Order.belongsTo(Table, { foreignKey: 'table_id', as: 'table' });
 Order.belongsTo(Customer, { foreignKey: 'customer_id', as: 'customer' });
 Order.belongsTo(User, { foreignKey: 'cashier_id', as: 'cashier' });
 Table.hasMany(Order, { foreignKey: 'table_id', as: 'orders' });
 Customer.hasMany(Order, { foreignKey: 'customer_id', as: 'orders' });
 
-// Order <-> OrderItem
 Order.hasMany(OrderItem, { foreignKey: 'order_id', as: 'items' });
 OrderItem.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 OrderItem.belongsTo(Menu, { foreignKey: 'menu_id', as: 'menu' });
 
-// Order <-> OrderStatusLog
 Order.hasMany(OrderStatusLog, { foreignKey: 'order_id', as: 'statusLogs' });
 OrderStatusLog.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 OrderStatusLog.belongsTo(User, { foreignKey: 'changed_by', as: 'changedByUser' });
 
-// Order <-> Transaction
 Order.hasOne(Transaction, { foreignKey: 'order_id', as: 'transaction' });
 Transaction.belongsTo(Order, { foreignKey: 'order_id', as: 'order' });
 
-// StockLog associations
 StockLog.belongsTo(RawMaterial, { foreignKey: 'raw_material_id', as: 'rawMaterial' });
 StockLog.belongsTo(Order, { foreignKey: 'reference_order_id', as: 'referenceOrder' });
 StockLog.belongsTo(User, { foreignKey: 'created_by', as: 'createdByUser' });
