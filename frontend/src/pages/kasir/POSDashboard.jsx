@@ -161,9 +161,11 @@ const POSDashboard = () => {
             </div>
           </div>
 
-          <div className="pos-category-tabs">
+          <div className="pos-category-tabs" role="group" aria-label="Filter kategori menu">
             <button
-              className={`category-tab ${posActiveCategory === 'all' ? 'active' : ''}`}
+              type="button"
+              className={`pos-category-tab ${posActiveCategory === 'all' ? 'active' : ''}`}
+              aria-pressed={posActiveCategory === 'all'}
               onClick={() => setPosActiveCategory('all')}
             >
               Semua
@@ -171,7 +173,9 @@ const POSDashboard = () => {
             {allCategories.map((cat) => (
               <button
                 key={cat.id}
-                className={`category-tab ${posActiveCategory === String(cat.id) ? 'active' : ''}`}
+                type="button"
+                className={`pos-category-tab ${posActiveCategory === String(cat.id) ? 'active' : ''}`}
+                aria-pressed={posActiveCategory === String(cat.id)}
                 onClick={() => setPosActiveCategory(String(cat.id))}
               >
                 {cat.name}
