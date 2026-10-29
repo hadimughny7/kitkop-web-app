@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import LoadingState from '../../components/LoadingState';
 import { reportAPI } from '../../services/api';
 import { HiOutlineShoppingCart, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineExclamation, HiOutlineCash, HiOutlineArrowRight } from 'react-icons/hi';
 import './MainDashboard.css';
@@ -6,20 +7,24 @@ import './MainDashboard.css';
 const MainDashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  const loadDashboard = useCallback(() => {
+    return reportAPI.getDashboard()
+      .then((res) => setStats(res.data.data))
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
+  }, []);
 
   useEffect(() => {
-    const loadDashboard = async () => {
-      try {
-        const res = await reportAPI.getDashboard();
-        setStats(res.data.data);
-      } catch (err) {
-        console.error('Failed to load dashboard:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
     loadDashboard();
-  }, []);
+  }, [loadDashboard]);
+
+  const retryLoad = () => {
+    setLoading(true);
+    setLoadError(false);
+    loadDashboard();
+  };
 
   const formatCurrency = (val) => {
     return new Intl.NumberFormat('id-ID', {
@@ -29,11 +34,18 @@ const MainDashboard = () => {
     }).format(val || 0);
   };
 
-  if (loading) {
+  if (loading) return <LoadingState>Memuat dashboard...</LoadingState>;
+
+  if (loadError) {
     return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-        <p>Memuat dashboard...</p>
+      <div className="main-dashboard">
+        <div className="page-header">
+          <h1 className="page-title">Dashboard</h1>
+        </div>
+        <div className="empty-state">
+          <p role="alert">Data dashboard gagal dimuat. Periksa koneksi lalu coba lagi.</p>
+          <button className="btn btn-primary" onClick={retryLoad}>Coba lagi</button>
+        </div>
       </div>
     );
   }
