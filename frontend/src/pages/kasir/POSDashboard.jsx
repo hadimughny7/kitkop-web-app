@@ -1,6 +1,8 @@
 import MenuOptionPicker from '../../components/MenuOptionPicker';
 import { activeGroups, optionText, makeCartItem, addCartLine, replaceCartLine } from '../../utils/menuOptions';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import LoadingState from '../../components/LoadingState';
+import LoadError from '../../components/LoadError';
 import { orderAPI, paymentAPI, menuAPI, categoryAPI, tableAPI, settingAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { HiOutlineCash, HiOutlinePlus, HiOutlineMinus, HiOutlineTrash, HiOutlineSearch, HiOutlineShoppingCart } from 'react-icons/hi';
@@ -9,6 +11,8 @@ import './POSDashboard.css';
 const POSDashboard = () => {
   const [picking, setPicking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [settingsError, setSettingsError] = useState(false);
 
   // === State untuk POS ===
   const [allMenus, setAllMenus] = useState([]);
@@ -23,32 +27,36 @@ const POSDashboard = () => {
   const [taxPercent, setTaxPercent] = useState(10);
   const [servicePercent, setServicePercent] = useState(0);
 
-  useEffect(() => {
-    const loadPosData = async () => {
-      try {
-        const [menuRes, catRes, tableRes] = await Promise.all([
-          menuAPI.getAll({ available_only: 'true' }),
-          categoryAPI.getAll(),
-          tableAPI.getAll(),
-        ]);
+  const loadPosData = useCallback(() => {
+    return Promise.all([
+      menuAPI.getAll({ available_only: 'true' }),
+      categoryAPI.getAll(),
+      tableAPI.getAll(),
+    ])
+      .then(async ([menuRes, catRes, tableRes]) => {
         setAllMenus(menuRes.data.data);
         setAllCategories(catRes.data.data);
         setAllTables(tableRes.data.data || []);
-        // Load settings
+        setLoadError(false);
         try {
           const settingRes = await settingAPI.getAll();
           const sd = settingRes.data.data;
           if (sd.tax_percentage !== undefined) setTaxPercent(parseFloat(sd.tax_percentage));
           if (sd.service_charge_percentage !== undefined) setServicePercent(parseFloat(sd.service_charge_percentage));
-        } catch { /* fallback to defaults */ }
-      } catch {
-        toast.error('Gagal memuat data menu.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadPosData();
+          setSettingsError(false);
+        } catch {
+          setSettingsError(true);
+        }
+      })
+      .catch(() => setLoadError(true))
+      .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    loadPosData();
+  }, [loadPosData]);
+
+  const retryLoad = () => { setLoading(true); loadPosData(); };
 
   const posFilteredMenus = allMenus.filter((menu) => {
     const matchCategory = posActiveCategory === 'all' || menu.category_id === parseInt(posActiveCategory);
@@ -124,7 +132,8 @@ const POSDashboard = () => {
     }
   };
 
-  if (loading) return <div className="loading-screen"><div className="spinner"></div></div>;
+  if (loading) return <LoadingState>Memuat data kasir...</LoadingState>;
+  if (loadError) return <LoadError title="Data menu, kategori, atau meja kasir gagal dimuat." onRetry={retryLoad} />;
 
   return (
     <div className="pos-page">
@@ -139,6 +148,10 @@ const POSDashboard = () => {
           <p className="page-subtitle">Buat pesanan langsung dari kasir</p>
         </div>
       </div>
+
+      {settingsError && (
+        <LoadError title="Pajak dan service charge gagal dimuat. Total sementara memakai nilai terakhir atau nilai bawaan; periksa kembali sebelum membayar." onRetry={retryLoad} />
+      )}
 
       {/* ============================================
           INLINE POS — Menu + Cart side by side

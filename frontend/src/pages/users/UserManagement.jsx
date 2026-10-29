@@ -6,11 +6,13 @@ import { HiOutlinePlus, HiOutlinePencil, HiOutlineTrash, HiOutlineSearch } from 
 import './UserManagement.css';
 import Modal from '../../components/Modal';
 import LoadingState from '../../components/LoadingState';
+import LoadError from '../../components/LoadError';
 
 const UserManagement = () => {
   const { user, logout } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editUser, setEditUser] = useState(null);
@@ -25,12 +27,14 @@ const UserManagement = () => {
   const loadUsers = useCallback(() => {
     const request = ++userRequest.current;
     return userAPI.getAll({ search })
-      .then(res => { if (request === userRequest.current) setUsers(res.data.data); })
-      .catch(() => { if (request === userRequest.current) toast.error('Gagal memuat data.'); })
+      .then(res => { if (request === userRequest.current) { setUsers(res.data.data); setLoadError(false); } })
+      .catch(() => { if (request === userRequest.current) setLoadError(true); })
       .finally(() => { if (request === userRequest.current) setLoading(false); });
   }, [search]);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
+
+  const retryLoad = () => { setLoading(true); loadUsers(); };
 
   const openCreate = () => { setEditUser(null); setForm({ name: '', email: '', username: '', password: '', role: 'kasir' }); setShowModal(true); };
   const openEdit = (user) => { setEditUser(user); setForm({ name: user.name, email: user.email, username: user.username, password: '', role: user.role }); setShowModal(true); };
@@ -66,6 +70,7 @@ const UserManagement = () => {
   const roleColors = { owner: 'badge-primary', manajer: 'badge-info', kasir: 'badge-success', kitchen: 'badge-danger', barista: 'badge-info' };
 
   if (loading) return <LoadingState>Memuat pengguna...</LoadingState>;
+  if (loadError) return <LoadError title="Data pengguna gagal dimuat." onRetry={retryLoad} />;
 
   return (
     <div className="user-management">

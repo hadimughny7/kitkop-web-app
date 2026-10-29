@@ -6,6 +6,7 @@ import { createStaffSocket } from '../../services/socket';
 import { useAuth } from '../../context/useAuth';
 import Modal from '../../components/Modal';
 import LoadingState from '../../components/LoadingState';
+import LoadError from '../../components/LoadError';
 
 const StockManagement = () => {
   const { hasRole } = useAuth();
@@ -15,6 +16,7 @@ const StockManagement = () => {
   const [menus, setMenus] = useState([]);
   const [recentOrder, setRecentOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadErrors, setLoadErrors] = useState({});
   const [searchStock, setSearchStock] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
 
@@ -32,19 +34,28 @@ const StockManagement = () => {
   const [reduceForm, setReduceForm] = useState({ quantity: 0, notes: '' });
   const [recipeForm, setRecipeForm] = useState({ menu_id: '', raw_material_id: '', quantity_used: 0 });
 
-  const loadStocks = useCallback(() => stockAPI.getAll().then(res => setStocks(res.data.data)).catch(() => toast.error('Gagal memuat stok')), []);
+  const loadStocks = useCallback(() => stockAPI.getAll()
+    .then(res => { setStocks(res.data.data); setLoadErrors(prev => ({ ...prev, stocks: false })); })
+    .catch(() => setLoadErrors(prev => ({ ...prev, stocks: true }))), []);
 
-  const loadRecipes = useCallback(() => recipeAPI.getAll().then(res => setRecipes(res.data.data)).catch(() => toast.error('Gagal memuat resep')), []);
+  const loadRecipes = useCallback(() => recipeAPI.getAll()
+    .then(res => { setRecipes(res.data.data); setLoadErrors(prev => ({ ...prev, recipes: false })); })
+    .catch(() => setLoadErrors(prev => ({ ...prev, recipes: true }))), []);
 
-  const loadMenus = useCallback(() => menuAPI.getAll().then(res => setMenus(res.data.data)).catch(() => toast.error('Gagal memuat menu')), []);
+  const loadMenus = useCallback(() => menuAPI.getAll()
+    .then(res => { setMenus(res.data.data); setLoadErrors(prev => ({ ...prev, menus: false })); })
+    .catch(() => setLoadErrors(prev => ({ ...prev, menus: true }))), []);
 
   const loadRecentOrder = useCallback(() => orderAPI.getAll({ status: 'completed' })
-    .then(res => setRecentOrder(res.data.data[0] || null)).catch(() => {}), []);
+    .then(res => { setRecentOrder(res.data.data[0] || null); setLoadErrors(prev => ({ ...prev, recentOrder: false })); })
+    .catch(() => setLoadErrors(prev => ({ ...prev, recentOrder: true }))), []);
 
   const loadData = useCallback(() => Promise.all([loadStocks(), loadRecipes(), loadMenus(), loadRecentOrder()])
     .finally(() => setLoading(false)), [loadStocks, loadRecipes, loadMenus, loadRecentOrder]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const retryLoad = () => { setLoading(true); loadData(); };
 
   useEffect(() => {
     const socket = createStaffSocket();
@@ -135,6 +146,9 @@ const StockManagement = () => {
   }, {});
 
   if (loading) return <LoadingState>Memuat stok dan resep...</LoadingState>;
+  if (loadErrors.stocks || loadErrors.recipes || loadErrors.menus) {
+    return <LoadError title="Data stok, resep, atau menu gagal dimuat." onRetry={retryLoad} />;
+  }
 
   return (
     <div className="stock-management">
@@ -322,6 +336,9 @@ const StockManagement = () => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
 
           {/* Pengurangan Otomatis Terbaru */}
+          {loadErrors.recentOrder ? (
+            <LoadError title="Data pesanan untuk pengurangan stok terbaru gagal dimuat." onRetry={retryLoad} />
+          ) : (
           <div className="card" style={{ background: '#fcfcfc' }}>
             <div className="card-header" style={{ paddingBottom: 'var(--space-2)' }}>
               <h3 style={{ fontSize: 'var(--text-base)', margin: 0 }}>Pengurangan Otomatis Terbaru</h3>
@@ -380,6 +397,7 @@ const StockManagement = () => {
               </div>
             </div>
           </div>
+          )}
 
         </div>
       </div>

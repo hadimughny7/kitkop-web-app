@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { tableAPI } from '../../services/api';
 import Modal from '../../components/Modal';
 import LoadingState from '../../components/LoadingState';
+import LoadError from '../../components/LoadError';
 import { useAuth } from '../../context/useAuth';
 import toast from 'react-hot-toast';
 import {
@@ -17,6 +18,7 @@ import { QRCodeSVG as QRCode } from 'qrcode.react';
 const TableManagement = () => {
   const [tables, setTables] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const { hasRole } = useAuth();
   const isManager = hasRole('owner') || hasRole('manajer');
 
@@ -28,11 +30,13 @@ const TableManagement = () => {
   const [selectedTable, setSelectedTable] = useState(null);
 
   const loadTables = useCallback(() => tableAPI.getAll()
-    .then(res => setTables(res.data.data))
-    .catch(() => toast.error('Gagal memuat data meja.'))
+    .then(res => { setTables(res.data.data); setLoadError(false); })
+    .catch(() => setLoadError(true))
     .finally(() => setLoading(false)), []);
 
   useEffect(() => { loadTables(); }, [loadTables]);
+
+  const retryLoad = () => { setLoading(true); loadTables(); };
 
   const handleTableSubmit = async (e) => {
     e.preventDefault();
@@ -127,6 +131,7 @@ const TableManagement = () => {
   const totalInactive = tables.filter((t) => !t.is_active).length;
 
   if (loading) return <LoadingState>Memuat meja...</LoadingState>;
+  if (loadError) return <LoadError title="Data meja gagal dimuat." onRetry={retryLoad} />;
 
   return (
     <div>

@@ -15,10 +15,13 @@ import {
 } from 'react-icons/hi';
 import { createStaffSocket } from '../../services/socket';
 import './OrderDashboard.css';
+import LoadingState from '../../components/LoadingState';
+import LoadError from '../../components/LoadError';
 
 const OrderDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
@@ -47,14 +50,16 @@ const OrderDashboard = () => {
     if (typeFilter !== 'all') params.order_type = typeFilter;
     if (dateFilter) params.date = dateFilter;
     return orderAPI.getAll(params)
-      .then(res => { if (request === orderRequest.current) setOrders(res.data.data); })
-      .catch(() => { if (request === orderRequest.current) toast.error('Gagal memuat pesanan.'); })
+      .then(res => { if (request === orderRequest.current) { setOrders(res.data.data); setLoadError(false); } })
+      .catch(() => { if (request === orderRequest.current) setLoadError(true); })
       .finally(() => { if (request === orderRequest.current) setLoading(false); });
   }, [statusFilter, typeFilter, dateFilter]);
 
   useEffect(() => {
     loadOrders();
   }, [loadOrders]);
+
+  const retryLoad = () => { setLoading(true); loadOrders(); };
 
   useEffect(() => {
     const socket = createStaffSocket();
@@ -129,12 +134,8 @@ const OrderDashboard = () => {
     );
   });
 
-  if (loading)
-    return (
-      <div className="loading-screen">
-        <div className="spinner"></div>
-      </div>
-    );
+  if (loading) return <LoadingState>Memuat pesanan...</LoadingState>;
+  if (loadError) return <LoadError title="Data pesanan gagal dimuat." onRetry={retryLoad} />;
 
   return (
     <div>
