@@ -17,12 +17,16 @@ import { createStaffSocket } from '../../services/socket';
 import './OrderDashboard.css';
 import LoadingState from '../../components/LoadingState';
 import LoadError from '../../components/LoadError';
+import { fetchAllOrders } from '../dashboard/staffDashboardData';
+
+const PAGE_SIZE = 50;
 
 const OrderDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   // Helper: get local date as YYYY-MM-DD (WIB, not UTC)
@@ -41,16 +45,18 @@ const OrderDashboard = () => {
   // For receipt printing
   const [printOrder, setPrintOrder] = useState(null);
   const receiptRef = useRef(null);
+  const tableCard = useRef(null);
 
   const orderRequest = useRef(0);
   const loadOrders = useCallback(() => {
     const request = ++orderRequest.current;
-    const params = { limit: 200 };
+    const params = {};
     if (statusFilter !== 'all') params.status = statusFilter;
     if (typeFilter !== 'all') params.order_type = typeFilter;
     if (dateFilter) params.date = dateFilter;
-    return orderAPI.getAll(params)
-      .then(res => { if (request === orderRequest.current) { setOrders(res.data.data); setLoadError(false); } })
+    // Search and status totals must include orders beyond the visible page.
+    return fetchAllOrders(orderAPI.getAll, params)
+      .then(data => { if (request === orderRequest.current) { setOrders(data); setLoadError(false); } })
       .catch(() => { if (request === orderRequest.current) setLoadError(true); })
       .finally(() => { if (request === orderRequest.current) setLoading(false); });
   }, [statusFilter, typeFilter, dateFilter]);
@@ -134,6 +140,15 @@ const OrderDashboard = () => {
     );
   });
 
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const visibleOrders = filteredOrders.slice(pageStart, pageStart + PAGE_SIZE);
+  const changePage = (nextPage) => {
+    setPage(nextPage);
+    tableCard.current?.scrollIntoView({ block: 'start' });
+  };
+
   if (loading) return <LoadingState>Memuat pesanan...</LoadingState>;
   if (loadError) return <LoadError title="Data pesanan gagal dimuat." onRetry={retryLoad} />;
 
@@ -187,7 +202,7 @@ const OrderDashboard = () => {
       </div>
 
       {/* Order Table Card */}
-      <div className="card no-print">
+      <div ref={tableCard} className="card no-print">
         <div className="card-header">
           <h3 style={{ fontSize: 'var(--text-lg)' }}>Daftar Pesanan</h3>
           <div className="order-filters">
@@ -197,10 +212,10 @@ const OrderDashboard = () => {
                 type="text"
                 placeholder="Cari pesanan..."
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               />
             </div>
-            <select className="form-select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <select className="form-select" value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); setLoading(true); }}>
               <option value="all">Semua Status</option>
               <option value="pending">Menunggu</option>
               <option value="confirmed">Dikonfirmasi</option>
@@ -209,7 +224,7 @@ const OrderDashboard = () => {
               <option value="completed">Selesai</option>
               <option value="cancelled">Batal</option>
             </select>
-            <select className="form-select" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <select className="form-select" value={typeFilter} onChange={(e) => { setTypeFilter(e.target.value); setPage(1); setLoading(true); }}>
               <option value="all">Semua Tipe</option>
               <option value="qr">QR</option>
               <option value="kasir">Kasir</option>
@@ -219,13 +234,13 @@ const OrderDashboard = () => {
                 type="date"
                 className="form-select"
                 value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
+                onChange={(e) => { setDateFilter(e.target.value); setPage(1); setLoading(true); }}
                 style={{ cursor: 'pointer' }}
               />
               {dateFilter && dateFilter !== getLocalDate() && (
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={() => setDateFilter(getLocalDate())}
+                  onClick={() => { setDateFilter(getLocalDate()); setPage(1); setLoading(true); }}
                   title="Kembali ke hari ini"
                   style={{ whiteSpace: 'nowrap', fontSize: '12px' }}
                 >
@@ -235,7 +250,7 @@ const OrderDashboard = () => {
               {dateFilter && (
                 <button
                   className="btn btn-ghost btn-sm"
-                  onClick={() => setDateFilter('')}
+                  onClick={() => { setDateFilter(''); setPage(1); setLoading(true); }}
                   title="Tampilkan semua tanggal"
                   style={{ whiteSpace: 'nowrap', fontSize: '12px' }}
                 >
@@ -262,7 +277,7 @@ const OrderDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((o) => (
+              {visibleOrders.map((o) => (
                 <tr key={o.id}>
                   <td>
                     <strong style={{ color: 'var(--primary-600)' }}>{o.order_number}</strong>
@@ -326,6 +341,20 @@ const OrderDashboard = () => {
             </tbody>
           </table>
         </div>
+        <nav className="order-pagination" aria-label="Halaman daftar pesanan">
+          <p role="status">
+            Menampilkan {filteredOrders.length ? pageStart + 1 : 0}–{pageStart + visibleOrders.length} dari {filteredOrders.length} pesanan
+          </p>
+          <div className="order-pagination-actions">
+            <button type="button" className="btn btn-secondary" disabled={currentPage === 1} onClick={() => changePage(currentPage - 1)}>
+              Sebelumnya
+            </button>
+            <span>Halaman {currentPage} dari {totalPages}</span>
+            <button type="button" className="btn btn-secondary" disabled={currentPage === totalPages} onClick={() => changePage(currentPage + 1)}>
+              Berikutnya
+            </button>
+          </div>
+        </nav>
       </div>
 
       {/* Pay Modal */}
