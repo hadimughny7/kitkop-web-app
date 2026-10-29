@@ -15,6 +15,8 @@ import {
   HiOutlineTag,
   HiOutlineBeaker,
   HiOutlineCog,
+  HiChevronDoubleLeft,
+  HiChevronDoubleRight,
 } from 'react-icons/hi';
 import { useEffect, useRef, useState } from 'react';
 import StaffOrderNotifications from './StaffOrderNotifications';
@@ -24,9 +26,20 @@ const DashboardLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('kitkop_sidebar_collapsed') === 'true'; }
+    catch { return false; }
+  });
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 1024px)').matches);
   const sidebar = useRef(null);
   const menuToggle = useRef(null);
+  const desktopCollapsed = !isMobile && sidebarCollapsed;
+  const toggleLabel = isMobile ? 'Buka navigasi' : sidebarCollapsed ? 'Perluas sidebar' : 'Perkecil sidebar';
+
+  useEffect(() => {
+    try { localStorage.setItem('kitkop_sidebar_collapsed', String(sidebarCollapsed)); }
+    catch { /* Navigation remains usable when browser storage is unavailable. */ }
+  }, [sidebarCollapsed]);
 
   useEffect(() => {
     const media = window.matchMedia('(max-width: 1024px)');
@@ -155,7 +168,7 @@ const DashboardLayout = () => {
   };
 
   return (
-    <div className="dashboard-layout">
+    <div className={`dashboard-layout${desktopCollapsed ? ' sidebar-collapsed' : ''}`}>
       <a className="skip-link" href="#dashboard-content">Lewati ke konten</a>
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -167,7 +180,7 @@ const DashboardLayout = () => {
         <div className="sidebar-header">
           <div className="sidebar-logo">
             <img src="/logo-kitkop.png" alt="Kitkop.id" className="logo-img" />
-            <div>
+            <div className="sidebar-brand-copy">
               <h1 className="logo-text">kitkop.id</h1>
               <p className="logo-subtitle">PLACE FOR EVERYONE</p>
             </div>
@@ -183,6 +196,8 @@ const DashboardLayout = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              aria-label={item.label}
+              title={desktopCollapsed ? item.label : undefined}
               end={item.path === '/dashboard'}
               className={({ isActive }) =>
                 `nav-link ${isActive ? 'active' : ''}`
@@ -196,7 +211,7 @@ const DashboardLayout = () => {
         </nav>
 
         <div className="sidebar-footer">
-          <div className="user-info">
+          <div className="user-info" title={desktopCollapsed ? `${user?.name} (${roleLabels[user?.role]})` : undefined}>
             <div className="user-avatar">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
@@ -214,8 +229,11 @@ const DashboardLayout = () => {
       {/* Main content */}
       <main className="dashboard-main" inert={isMobile && sidebarOpen}>
         <header className="dashboard-header">
-          <button ref={menuToggle} className="menu-toggle" aria-label="Buka navigasi" aria-controls="dashboard-sidebar" aria-expanded={sidebarOpen} onClick={() => setSidebarOpen(true)}>
-            <HiOutlineMenu />
+          <button ref={menuToggle} type="button" className="menu-toggle" aria-label={toggleLabel} title={toggleLabel} aria-controls="dashboard-sidebar" aria-expanded={isMobile ? sidebarOpen : !sidebarCollapsed} onClick={() => {
+            if (isMobile) setSidebarOpen(true);
+            else setSidebarCollapsed(collapsed => !collapsed);
+          }}>
+            {isMobile ? <HiOutlineMenu /> : sidebarCollapsed ? <HiChevronDoubleRight /> : <HiChevronDoubleLeft />}
           </button>
           <p className="workspace-label"><span>KITKOP</span><span className="workspace-divider">/</span><span>WORKSPACE</span></p>
           <div className="header-info">

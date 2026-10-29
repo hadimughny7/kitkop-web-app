@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import LoadingState from '../../components/LoadingState';
 import { reportAPI } from '../../services/api';
+import { createStaffSocket } from '../../services/socket';
 import { HiOutlineShoppingCart, HiOutlineCurrencyDollar, HiOutlineClock, HiOutlineExclamation, HiOutlineCash, HiOutlineArrowRight } from 'react-icons/hi';
 import './MainDashboard.css';
 
@@ -9,16 +10,55 @@ const MainDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
 
-  const loadDashboard = useCallback(() => {
-    return reportAPI.getDashboard()
-      .then((res) => setStats(res.data.data))
-      .catch(() => setLoadError(true))
-      .finally(() => setLoading(false));
-  }, []);
+  const reloadRef = useRef(null);
+  const loadDashboard = useCallback(() => reloadRef.current?.(), []);
 
   useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
+    let disposed = false;
+    let busy = false;
+    let queued = false;
+    let refreshTimer;
+
+    const load = async () => {
+      if (disposed) return;
+      if (busy) { queued = true; return; }
+      busy = true;
+      do {
+        queued = false;
+        try {
+          const res = await reportAPI.getDashboard();
+          if (!disposed) { setStats(res.data.data); setLoadError(false); }
+        } catch {
+          if (!disposed) setLoadError(true);
+        }
+      } while (queued && !disposed);
+      busy = false;
+      if (!disposed) setLoading(false);
+    };
+
+    const scheduleRefresh = () => {
+      clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(load, 250);
+    };
+    const handleVisibility = () => { if (!document.hidden) scheduleRefresh(); };
+    const socket = createStaffSocket();
+    ['connect', 'new-order', 'payment-success', 'order-status-update', 'order-item-update', 'stock-updated'].forEach(event => {
+      socket.on(event, scheduleRefresh);
+    });
+    document.addEventListener('visibilitychange', handleVisibility);
+    const interval = setInterval(scheduleRefresh, 60000);
+    reloadRef.current = load;
+    load();
+
+    return () => {
+      disposed = true;
+      clearTimeout(refreshTimer);
+      clearInterval(interval);
+      reloadRef.current = null;
+      document.removeEventListener('visibilitychange', handleVisibility);
+      socket.disconnect();
+    };
+  }, []);
 
   const retryLoad = () => {
     setLoading(true);

@@ -17,7 +17,8 @@
   left: 0;
   bottom: 0;
   z-index: 100;
-  transition: transform var(--transition-base);
+  transition: width var(--transition-base), transform var(--transition-base);
+  overflow-x: hidden;
 }
 
 .sidebar-header {
@@ -177,6 +178,7 @@
   flex: 1;
   min-width: 0;
   margin-left: var(--sidebar-width);
+  transition: margin-left var(--transition-base);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -195,7 +197,7 @@
 }
 
 .menu-toggle {
-  display: none;
+  display: inline-flex;
   background: none;
   color: var(--neutral-600);
   font-size: 1.5rem;
@@ -306,10 +308,24 @@ html .sidebar :is(a, button):focus-visible { outline-color: white; }
 .btn-logout:hover { background: #3b2424; color: #ffb4b4; }
 .dashboard-header { min-height: 80px; justify-content: space-between; background: white; border-bottom: 1px solid var(--neutral-200); }
 .workspace-label { font-size: 11px; font-weight: 700; letter-spacing: 0.09em; color: var(--neutral-900); display: flex; gap: 12px; align-items: center; }
+.workspace-label { margin-right: auto; }
 .workspace-label span { color: inherit; }
 .workspace-label .workspace-divider { color: var(--neutral-400); font-weight: 400; }
 .dashboard-main { background: var(--surface-secondary); }
 .header-greeting { font-family: var(--font-body); font-size: 13px; }
+@media (min-width: 1025px) {
+  .sidebar-collapsed .sidebar { width: 80px; }
+  .sidebar-collapsed .dashboard-main { margin-left: 80px; }
+  .sidebar-collapsed .sidebar-brand-copy,
+  .sidebar-collapsed .nav-caption,
+  .sidebar-collapsed .nav-label,
+  .sidebar-collapsed .user-details { display: none; }
+  .sidebar-collapsed .sidebar-header { justify-content: center; padding-inline: 12px; }
+  .sidebar-collapsed .sidebar-nav { padding-inline: 12px; }
+  .sidebar-collapsed .nav-link { justify-content: center; padding-inline: 0; }
+  .sidebar-collapsed .nav-icon { font-size: 22px; }
+  .sidebar-collapsed .sidebar-footer { flex-direction: column; padding: 16px 12px; }
+}
 @media (max-width: 1024px) {
   .workspace-label { margin-right: auto; }
   .dashboard-header { min-height: 72px; gap: 12px; }
