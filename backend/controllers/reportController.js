@@ -254,7 +254,7 @@ const exportOrderReport = async (req, res, next) => {
         order_number: order.order_number,
         date: new Date(order.created_at).toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' }),
         customer: order.customer?.name || '-',
-        table: order.table?.table_number || '-',
+        table: order.table?.table_number || 'Takeaway',
         type: order.order_type,
         cashier: order.cashier?.name || '-',
         status: order.status,

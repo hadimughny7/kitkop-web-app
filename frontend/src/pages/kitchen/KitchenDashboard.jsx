@@ -167,7 +167,7 @@ const KitchenDashboard = () => {
                 <div className="order-card-header">
                   <div>
                     <span className="order-number">{order.order_number}</span>
-                    <span className="order-table">Meja {order.table?.table_number || '-'}</span>
+                    <span className="order-table">{order.table?.table_number ? `Meja ${order.table.table_number}` : 'Takeaway'}</span>
                   </div>
                   <span className="order-time">
                     <HiOutlineClock /> {formatTime(order.created_at)}

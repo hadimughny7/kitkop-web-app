@@ -284,7 +284,7 @@ const OrderDashboard = () => {
                   </td>
                   <td>{formatDate(o.created_at)}</td>
                   <td>{o.customer?.name}</td>
-                  <td>{o.table?.table_number || '-'}</td>
+                  <td>{o.table?.table_number || 'Takeaway'}</td>
                   <td>
                     <span className={`badge ${o.order_type === 'kasir' ? 'badge-primary' : 'badge-info'}`}>
                       {o.order_type === 'kasir' ? 'Kasir' : 'QR'}
