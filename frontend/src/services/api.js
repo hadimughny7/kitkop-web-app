@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { rememberOrderTracking, getOrderTrackingToken } from './orderTracking';
+import { getOrderSessionToken, rememberOrderSession } from './orderSession';
 
 export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
 const API_BASE_URL = `${BACKEND_URL}/api`;
@@ -85,9 +86,18 @@ export const tableAPI = {
 
 export const orderAPI = {
   create: async (data) => {
-    const response = await api.post('/orders', data);
-    rememberOrderTracking(response.data.data);
-    return response;
+    const sessionToken = getOrderSessionToken();
+    try {
+      const response = await api.post('/orders', data, {
+        headers: sessionToken ? { 'X-Order-Session': sessionToken } : {},
+      });
+      rememberOrderSession(response.headers['x-order-session']);
+      rememberOrderTracking(response.data.data);
+      return response;
+    } catch (error) {
+      rememberOrderSession(error.response?.headers?.['x-order-session']);
+      throw error;
+    }
   },
   getAll: (params) => api.get('/orders', { params }),
   getById: (id) => api.get(`/orders/${id}`),

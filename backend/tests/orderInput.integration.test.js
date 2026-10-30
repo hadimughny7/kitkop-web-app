@@ -29,6 +29,10 @@ test('malformed order requests return 400 before writing data while normal guest
       if (/^\s*(INSERT|UPDATE|DELETE|REPLACE)\b/i.test(typeof sql === 'string' ? sql : sql?.query || '')) writeAttempts++;
       return originalQuery.call(this, sql, ...args);
     });
+    // This validation matrix exceeds normal request budgets; default limits have separate HTTP tests.
+    const limits = require('../middleware/orderRateLimit');
+    const createOrderRateLimiters = limits.createOrderRateLimiters;
+    t.mock.method(limits, 'createOrderRateLimiters', () => createOrderRateLimiters({ guestLimit: 1000, ipLimit: 1000, staffLimit: 1000 }));
     const express = require('express'); const app = express(); app.use(express.json());
     const events = []; app.set('io', { to: () => ({ emit: event => events.push(event) }) });
     app.use('/api/orders', require('../routes/orderRoutes')); app.use('/api/payments', require('../routes/paymentRoutes'));

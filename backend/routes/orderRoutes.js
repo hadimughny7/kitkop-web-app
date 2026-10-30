@@ -3,9 +3,10 @@ const router = express.Router();
 const { createOrder, getOrders, getOrderById, trackOrder, updateOrderStatus, rejectOrderItem, updateItemStatus, processAllItems, completeAllItems } = require('../controllers/orderController');
 const { verifyToken, authorizeRoles, optionalAuth } = require('../middleware/auth');
 const { requireOrderTracking } = require('../middleware/orderTracking');
+const { createOrderRateLimiters } = require('../middleware/orderRateLimit');
 
 // Public (customer) — optionalAuth attaches req.user if token present (kasir)
-router.post('/', optionalAuth, createOrder);
+router.post('/', optionalAuth, ...createOrderRateLimiters(), createOrder);
 router.get('/track/:orderNumber', requireOrderTracking, trackOrder);
 
 // Staff routes

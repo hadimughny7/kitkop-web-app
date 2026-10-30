@@ -45,6 +45,7 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
+  exposedHeaders: ['X-Order-Session', 'Retry-After'],
 }));
 app.use(express.json({ verify: capturePaymentWebhookBody }));
 app.use(express.urlencoded({ extended: true }));
